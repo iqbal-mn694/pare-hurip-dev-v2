@@ -61,7 +61,7 @@ const Header = () => {
               style={{ color: `${textColor}` }}
             >
               <h2 className="font-bold">PARE</h2>
-              <h2 className="font-bold">HURIP</h2>
+              <h2 className="font-bold">HURIP V2</h2>
             </div>
           </div>
         </Link>
