@@ -35,6 +35,7 @@ const secondaryNavItem = {
 
 interface AdminLayoutProps {
   title: string
+  subtitle?: string
   children: React.ReactNode
 }
 
@@ -59,7 +60,7 @@ function sentenceCase(value: string) {
   return value ? value[0].toUpperCase() + value.slice(1).toLowerCase() : value
 }
 
-export function AdminLayout({ title, children }: AdminLayoutProps) {
+export function AdminLayout({ title, subtitle, children }: AdminLayoutProps) {
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = React.useState(false)
   const { role } = useAdminAuth()
@@ -158,6 +159,9 @@ export function AdminLayout({ title, children }: AdminLayoutProps) {
                 <div>
                   <p className="text-sm text-slate-500 dark:text-slate-400">Halaman Admin</p>
                   <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h1>
+                  {subtitle ? (
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>
+                  ) : null}
                 </div>
               </div>
 
