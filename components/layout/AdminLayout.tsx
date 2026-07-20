@@ -81,7 +81,7 @@ export function AdminLayout({ title, children }: AdminLayoutProps) {
 
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-slate-200 bg-white px-4 py-6 shadow-sm transition-transform duration-200 dark:border-slate-800 dark:bg-slate-950 lg:static lg:translate-x-0",
+            "fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-slate-200 bg-white px-4 py-6 shadow-sm transition-transform duration-200 dark:border-slate-800 dark:bg-slate-950 lg:static lg:h-full lg:w-72 lg:translate-x-0",
             sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           )}
         >
@@ -144,7 +144,7 @@ export function AdminLayout({ title, children }: AdminLayoutProps) {
           </div>
         </aside>
 
-        <div className="flex flex-1 flex-col lg:pl-72">
+        <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-20 border-b border-slate-200 bg-white px-4 py-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">

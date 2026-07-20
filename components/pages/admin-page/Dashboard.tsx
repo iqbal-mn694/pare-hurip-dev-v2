@@ -77,10 +77,10 @@ export default function Dashboard() {
 
       <div className="grid gap-4 xl:grid-cols-[60%_40%]">
         <Card className="rounded-xl border shadow-sm">
-          <CardHeader className="px-5 pb-0 pt-5">
+          <CardHeader className="px-5 pb-0 pt-4">
             <CardTitle className="mb-0">Status Kelengkapan Data per Kecamatan</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 px-5 pb-5 pt-1">
+          <CardContent className="space-y-3 px-5 pb-5 pt-0">
             {kecamatanProgress.map((item) => (
               <div key={item.name} className="space-y-2">
                 <div className="flex items-center justify-between text-sm font-medium text-slate-700 dark:text-slate-200">
@@ -102,10 +102,10 @@ export default function Dashboard() {
         </Card>
 
         <Card className="rounded-xl border shadow-sm">
-          <CardHeader className="px-5 pb-0 pt-5">
+          <CardHeader className="px-5 pb-0 pt-4">
             <CardTitle className="mb-0">Log Aktivitas Terbaru</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 px-5 pb-5 pt-1">
+          <CardContent className="space-y-3 px-5 pb-5 pt-0">
             {activityLogs.map((item, index) => {
               const Icon = item.icon
               return (
