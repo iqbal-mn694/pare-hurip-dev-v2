@@ -1,98 +1,133 @@
-import { NextResponse } from "next/server"
-import { supabase } from "@/lib/supabase/client"
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
-const TABLE = "profiles"
+async function requireSuperAdmin() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: NextResponse.json({ error: "Belum login." }, { status: 401 }) };
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.role !== "superadmin") {
+    return { error: NextResponse.json({ error: "Hanya superadmin yang boleh mengakses ini." }, { status: 403 }) };
+  }
+
+  return { error: null };
+}
 
 export async function GET() {
-  try {
-    // TODO: ganti ke Supabase admin/service client setelah lib/supabase/admin.ts diisi tim backend,
-    // supaya bisa bypass RLS dan akses data user secara penuh.
-    const { data, error } = await supabase
-      .from(TABLE)
-      .select("id, email, role, created_at")
-      .order("created_at", { ascending: false })
+  const { error } = await requireSuperAdmin();
+  if (error) return error;
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
+  const admin = createAdminClient();
+  const { data, error: fetchError } = await admin
+    .from("profiles")
+    .select("id, name, email, role, created_at")
+    .in("role", ["admin", "superadmin"])
+    .order("created_at", { ascending: false });
 
-    return NextResponse.json({ users: data ?? [] })
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || "Terjadi kesalahan saat mengambil data pengguna." },
-      { status: 500 },
-    )
+  if (fetchError) {
+    return NextResponse.json({ error: fetchError.message }, { status: 500 });
   }
+
+  return NextResponse.json({ users: data });
 }
 
 export async function POST(request: Request) {
-  try {
-    const body = await request.json()
-    const email = String(body.email ?? "").trim()
-    const role = String(body.role ?? "").trim()
+  const { error } = await requireSuperAdmin();
+  if (error) return error;
 
-    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-      return NextResponse.json({ error: "Email tidak valid." }, { status: 400 })
-    }
-    if (!role || !["admin", "superadmin"].includes(role)) {
-      return NextResponse.json({ error: "Role tidak valid." }, { status: 400 })
-    }
+  const { name, email, password, role } = await request.json();
 
-    // TODO: ganti dengan Supabase Auth Admin API sesungguhnya,
-    // karena idealnya akun auth dibuat dulu lalu profile-nya ditambahkan.
-    const { data, error } = await supabase.from(TABLE).insert({ email, role, created_at: new Date().toISOString() })
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-    return NextResponse.json({ user: data?.[0] ?? null })
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message || "Terjadi kesalahan saat menambah pengguna." }, { status: 500 })
+  if (!name || !email || !password) {
+    return NextResponse.json({ error: "Nama, email, dan password wajib diisi." }, { status: 400 });
   }
+  if (password.length < 6) {
+    return NextResponse.json({ error: "Password minimal 6 karakter." }, { status: 400 });
+  }
+
+  const admin = createAdminClient();
+
+  const { data: created, error: createError } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { name },
+  });
+
+  if (createError || !created.user) {
+    return NextResponse.json({ error: createError?.message ?? "Gagal membuat akun." }, { status: 400 });
+  }
+
+  const { error: profileError } = await admin.from("profiles").upsert({
+    id: created.user.id,
+    name,
+    email,
+    role: role === "superadmin" ? "superadmin" : "admin",
+  });
+
+  if (profileError) {
+    await admin.auth.admin.deleteUser(created.user.id);
+    return NextResponse.json({ error: profileError.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true });
 }
 
 export async function PATCH(request: Request) {
-  try {
-    const body = await request.json()
-    const userId = String(body.userId ?? "").trim()
-    const role = String(body.role ?? "").trim()
+  const { error } = await requireSuperAdmin();
+  if (error) return error;
 
-    if (!userId || !role || !["admin", "superadmin"].includes(role)) {
-      return NextResponse.json({ error: "Data tidak valid." }, { status: 400 })
-    }
+  const { userId, name, email } = await request.json();
 
-    const { data, error } = await supabase
-      .from(TABLE)
-      .update({ role })
-      .eq("id", userId)
-      .select("id, email, role, created_at")
-      .single()
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    return NextResponse.json({ user: data })
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message || "Terjadi kesalahan saat memperbarui role pengguna." }, { status: 500 })
+  if (!userId || !email) {
+    return NextResponse.json({ error: "userId dan email wajib diisi." }, { status: 400 });
   }
+
+  const admin = createAdminClient();
+
+  const { error: authUpdateError } = await admin.auth.admin.updateUserById(userId, { email });
+  if (authUpdateError) {
+    return NextResponse.json({ error: authUpdateError.message }, { status: 400 });
+  }
+
+  const { error: profileError } = await admin
+    .from("profiles")
+    .update({ name, email })
+    .eq("id", userId);
+
+  if (profileError) {
+    return NextResponse.json({ error: profileError.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true });
 }
 
 export async function DELETE(request: Request) {
-  try {
-    const body = await request.json()
-    const id = String(body.id ?? "").trim()
-    if (!id) {
-      return NextResponse.json({ error: "ID pengguna diperlukan." }, { status: 400 })
-    }
+  const { error } = await requireSuperAdmin();
+  if (error) return error;
 
-    // TODO: idealnya juga hapus dari Supabase Auth, bukan hanya dari tabel profiles.
-    const { error } = await supabase.from(TABLE).delete().eq("id", id)
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-    return NextResponse.json({ success: true })
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message || "Terjadi kesalahan saat menghapus pengguna." }, { status: 500 })
+  const { id } = await request.json();
+  if (!id) {
+    return NextResponse.json({ error: "id wajib diisi." }, { status: 400 });
   }
+
+  const admin = createAdminClient();
+
+  const { error: deleteError } = await admin.auth.admin.deleteUser(id);
+  if (deleteError) {
+    return NextResponse.json({ error: deleteError.message }, { status: 500 });
+  }
+
+  await admin.from("profiles").delete().eq("id", id);
+
+  return NextResponse.json({ success: true });
 }

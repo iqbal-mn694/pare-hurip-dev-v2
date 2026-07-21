@@ -50,6 +50,7 @@ export default function PenggunaAdmin() {
   const [isAdding, setIsAdding] = React.useState(false)
   const [newName, setNewName] = React.useState("")
   const [newEmail, setNewEmail] = React.useState("")
+  const [newPassword, setNewPassword] = React.useState("")
   const [formError, setFormError] = React.useState("")
 
   const [isEditing, setIsEditing] = React.useState(false)
@@ -107,6 +108,7 @@ export default function PenggunaAdmin() {
   const openAdd = () => {
     setNewName("")
     setNewEmail("")
+    setNewPassword("")
     setFormError("")
     setIsAdding(true)
   }
@@ -164,13 +166,21 @@ export default function PenggunaAdmin() {
       setFormError("Email tidak valid.")
       return
     }
+    if (!newPassword.trim()) {
+      setFormError("Password harus diisi.")
+      return
+    }
+    if (newPassword.length < 6) {
+      setFormError("Password minimal 6 karakter.")
+      return
+    }
 
     try {
       // Default role for created users via UI is 'admin' (form no longer exposes role)
       const response = await fetch("/api/admin/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newName.trim(), email: newEmail.trim(), role: "admin" }),
+        body: JSON.stringify({ name: newName.trim(), email: newEmail.trim(), password: newPassword.trim(), role: "admin" }),
       })
       const data = await response.json()
       if (!response.ok) {
@@ -309,6 +319,16 @@ export default function PenggunaAdmin() {
                   value={newEmail}
                   onChange={(event) => setNewEmail(event.target.value)}
                   placeholder="admin@example.com"
+                />
+              </div>
+              <div>
+                <Label htmlFor="new-admin-password">Password</Label>
+                <Input
+                  id="new-admin-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  placeholder="Minimal 6 karakter"
                 />
               </div>
               {formError ? <p className="text-sm text-rose-600">{formError}</p> : null}

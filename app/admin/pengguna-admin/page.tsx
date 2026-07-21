@@ -5,7 +5,7 @@ import { AdminLayout } from "@/components/layout/AdminLayout"
 
 export default function AdminPenggunaAdminPage() {
   return (
-    <AdminLayout title="Pengguna Admin" subtitle="Kelola akun admin dan superadmin." >
+    <AdminLayout title="Pengguna Admin" subtitle="Kelola akun admin dan superadmin.">
       <PenggunaAdmin />
     </AdminLayout>
   )

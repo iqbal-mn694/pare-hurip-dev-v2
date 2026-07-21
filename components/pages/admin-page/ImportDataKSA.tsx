@@ -1,5 +1,6 @@
 "use client"
 
+import { supabase } from "@/lib/supabase/client"
 import * as React from "react"
 import * as XLSX from "xlsx"
 import { AlertTriangle, CheckCircle, Download, Upload, XCircle } from "lucide-react"
@@ -151,7 +152,7 @@ function parseExcelToRows(file: File): Promise<ImportRow[]> {
         }
       })
 
-      resolve(rows.length > 0 ? rows.slice(0, 20) : buildDummyRows())
+      resolve(rows.length > 0 ? rows : buildDummyRows())
     } catch (error) {
       resolve(buildDummyRows())
     }
@@ -165,6 +166,8 @@ export default function ImportDataKSA() {
   const [rows, setRows] = React.useState<ValidatedImportRow[]>([])
   const [isLoading, setIsLoading] = React.useState(false)
   const [savedCount, setSavedCount] = React.useState(0)
+  const [isSaving, setIsSaving] = React.useState(false)
+  const [saveError, setSaveError] = React.useState<string>("")
 
   const validRowCount = rows.filter((row) => row.errors.length === 0).length
   const invalidRowCount = rows.length - validRowCount
@@ -214,13 +217,50 @@ export default function ImportDataKSA() {
     setFileError("")
     setRows([])
     setSavedCount(0)
+    setSaveError("")
   }
 
-  const handleSaveToDatabase = () => {
-    // TODO: Integrasi API penyimpanan data KSA resmi nanti.
-    setSavedCount(rows.length)
+  const handleSaveToDatabase = async () => {
+  setIsSaving(true)
+  setSaveError("")
+
+  const payload = rows.map(({ errors, isDuplicate, ...row }) => row)
+
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (!session) {
+      setSaveError("Silakan login kembali.")
+      return
+    }
+
+    const response = await fetch("/api/admin/admin/import-ksa", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ rows: payload }),
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      setSaveError(result?.error || "Gagal menyimpan data ke database.")
+      return
+    }
+
+    setSavedCount(result.savedCount ?? payload.length)
     setStage("saved")
+  } catch (error) {
+    console.error(error)
+    setSaveError("Terjadi kesalahan jaringan. Coba lagi.")
+  } finally {
+    setIsSaving(false)
   }
+}
 
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault()
@@ -384,12 +424,19 @@ export default function ImportDataKSA() {
                 </Table>
               </div>
 
+              {saveError ? (
+                <div className="flex items-start gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+                  <XCircle className="mt-0.5 size-4 shrink-0" />
+                  <span>{saveError}</span>
+                </div>
+              ) : null}
+
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <Button variant="outline" onClick={resetUploader}>
+                <Button variant="outline" onClick={resetUploader} disabled={isSaving}>
                   Batal
                 </Button>
-                <Button disabled={hasErrors} onClick={handleSaveToDatabase}>
-                  Simpan ke Database
+                <Button disabled={hasErrors || isSaving} onClick={handleSaveToDatabase}>
+                  {isSaving ? "Menyimpan..." : "Simpan ke Database"}
                 </Button>
               </div>
             </CardContent>
