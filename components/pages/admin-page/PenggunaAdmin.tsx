@@ -13,19 +13,20 @@ import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext"
 
 type UserProfile = {
   id: string
+  name?: string
   email: string
-  role: "admin" | "superadmin"
+  role?: "admin" | "superadmin"
   created_at: string
 }
 
 type FetchStatus = "idle" | "loading" | "success" | "error"
 
 const DUMMY_USERS: UserProfile[] = [
-  { id: "user-1", email: "admin1@example.com", role: "admin", created_at: "2025-05-10T09:41:00Z" },
-  { id: "user-2", email: "admin2@example.com", role: "admin", created_at: "2025-06-12T14:27:00Z" },
-  { id: "user-3", email: "superadmin@example.com", role: "superadmin", created_at: "2025-04-05T08:12:00Z" },
-  { id: "user-4", email: "admin3@example.com", role: "admin", created_at: "2025-07-01T11:07:00Z" },
-  { id: "user-5", email: "supervisor@example.com", role: "superadmin", created_at: "2025-03-22T16:35:00Z" },
+  { id: "user-1", name: "Admin Satu", email: "admin1@example.com", role: "admin", created_at: "2025-05-10T09:41:00Z" },
+  { id: "user-2", name: "Admin Dua", email: "admin2@example.com", role: "admin", created_at: "2025-06-12T14:27:00Z" },
+  { id: "user-3", name: "Super Admin", email: "superadmin@example.com", role: "superadmin", created_at: "2025-04-05T08:12:00Z" },
+  { id: "user-4", name: "Admin Tiga", email: "admin3@example.com", role: "admin", created_at: "2025-07-01T11:07:00Z" },
+  { id: "user-5", name: "Supervisor", email: "supervisor@example.com", role: "superadmin", created_at: "2025-03-22T16:35:00Z" },
 ]
 
 function formatDate(dateString: string) {
@@ -36,19 +37,7 @@ function formatDate(dateString: string) {
   })
 }
 
-function RoleBadge({ role }: { role: UserProfile["role"] }) {
-  return (
-    <span
-      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-        role === "superadmin"
-          ? "bg-amber-100 text-amber-900 dark:bg-amber-900/20 dark:text-amber-200"
-          : "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-200"
-      }`}
-    >
-      {role === "superadmin" ? "Superadmin" : "Admin"}
-    </span>
-  )
-}
+// RoleBadge removed — role column no longer displayed in table.
 
 export default function PenggunaAdmin() {
   const { role: currentRole } = useAdminAuth()
@@ -59,13 +48,14 @@ export default function PenggunaAdmin() {
   const [message, setMessage] = React.useState<string>("")
 
   const [isAdding, setIsAdding] = React.useState(false)
+  const [newName, setNewName] = React.useState("")
   const [newEmail, setNewEmail] = React.useState("")
-  const [newRole, setNewRole] = React.useState<"admin" | "superadmin" | "">("")
   const [formError, setFormError] = React.useState("")
 
   const [isEditing, setIsEditing] = React.useState(false)
   const [editingUserId, setEditingUserId] = React.useState<string | null>(null)
-  const [editingUserRole, setEditingUserRole] = React.useState<"admin" | "superadmin" | "">("")
+  const [editingUserName, setEditingUserName] = React.useState<string>("")
+  const [editingUserEmail, setEditingUserEmail] = React.useState<string>("")
   const [editError, setEditError] = React.useState("")
 
   const fetchUsers = React.useCallback(async () => {
@@ -86,6 +76,7 @@ export default function PenggunaAdmin() {
       setUsers(
         data.users.map((item: any) => ({
           id: item.id,
+          name: item.name ?? "",
           email: item.email,
           role: item.role,
           created_at: item.created_at,
@@ -114,8 +105,8 @@ export default function PenggunaAdmin() {
   }
 
   const openAdd = () => {
+    setNewName("")
     setNewEmail("")
-    setNewRole("")
     setFormError("")
     setIsAdding(true)
   }
@@ -127,7 +118,8 @@ export default function PenggunaAdmin() {
 
   const openEdit = (user: UserProfile) => {
     setEditingUserId(user.id)
-    setEditingUserRole(user.role)
+    setEditingUserName(user.name ?? "")
+    setEditingUserEmail(user.email)
     setEditError("")
     setIsEditing(true)
   }
@@ -140,8 +132,8 @@ export default function PenggunaAdmin() {
 
   const handleEditSave = async () => {
     if (!editingUserId) return
-    if (!editingUserRole) {
-      setEditError("Role harus dipilih.")
+    if (!editingUserEmail || !validateEmail(editingUserEmail.trim())) {
+      setEditError("Email tidak valid.")
       return
     }
 
@@ -149,35 +141,36 @@ export default function PenggunaAdmin() {
       const response = await fetch("/api/admin/users", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: editingUserId, role: editingUserRole }),
+        body: JSON.stringify({ userId: editingUserId, name: editingUserName.trim(), email: editingUserEmail.trim() }),
       })
       const data = await response.json()
       if (!response.ok) {
-        throw new Error(data?.error || "Gagal memperbarui role pengguna.")
+        throw new Error(data?.error || "Gagal memperbarui pengguna.")
       }
-      setMessage("Role pengguna berhasil diperbarui.")
+      setMessage("Data pengguna berhasil diperbarui.")
       closeEdit()
       fetchUsers()
     } catch (error: any) {
-      setEditError(error.message || "Terjadi kesalahan saat memperbarui role.")
+      setEditError(error.message || "Terjadi kesalahan saat memperbarui pengguna.")
     }
   }
 
   const handleSave = async () => {
+    if (!newName.trim()) {
+      setFormError("Nama harus diisi.")
+      return
+    }
     if (!validateEmail(newEmail.trim())) {
       setFormError("Email tidak valid.")
       return
     }
-    if (!newRole) {
-      setFormError("Role harus dipilih.")
-      return
-    }
 
     try {
+      // Default role for created users via UI is 'admin' (form no longer exposes role)
       const response = await fetch("/api/admin/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: newEmail.trim(), role: newRole }),
+        body: JSON.stringify({ name: newName.trim(), email: newEmail.trim(), role: "admin" }),
       })
       const data = await response.json()
       if (!response.ok) {
@@ -251,7 +244,6 @@ export default function PenggunaAdmin() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nama / Email</TableHead>
-                  <TableHead>Role</TableHead>
                   <TableHead>Tanggal dibuat</TableHead>
                   {isSuperadmin ? <TableHead>Aksi</TableHead> : null}
                 </TableRow>
@@ -259,30 +251,24 @@ export default function PenggunaAdmin() {
               <TableBody>
                 {users.map((user) => (
                   <TableRow key={user.id}>
-                    <TableCell>{user.email}</TableCell>
                     <TableCell>
-                      <RoleBadge role={user.role} />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{user.name ?? ""}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{user.email}</p>
+                      </div>
                     </TableCell>
                     <TableCell>{formatDate(user.created_at)}</TableCell>
                     {isSuperadmin ? (
                       <TableCell>
                         <div className="flex flex-wrap gap-2">
-                          <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => openEdit(user)}
-                    >
-                      <UserCheck className="size-4" />
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(user.id)}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
-                </TableCell>
+                          <Button variant="secondary" size="sm" onClick={() => openEdit(user)}>
+                            <UserCheck className="size-4" />
+                          </Button>
+                          <Button variant="destructive" size="sm" onClick={() => handleDelete(user.id)}>
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     ) : null}
                   </TableRow>
                 ))}
@@ -308,6 +294,15 @@ export default function PenggunaAdmin() {
             </div>
             <div className="grid gap-4">
               <div>
+                <Label htmlFor="new-admin-name">Nama</Label>
+                <Input
+                  id="new-admin-name"
+                  value={newName}
+                  onChange={(event) => setNewName(event.target.value)}
+                  placeholder="Nama lengkap"
+                />
+              </div>
+              <div>
                 <Label htmlFor="new-admin-email">Email</Label>
                 <Input
                   id="new-admin-email"
@@ -315,21 +310,6 @@ export default function PenggunaAdmin() {
                   onChange={(event) => setNewEmail(event.target.value)}
                   placeholder="admin@example.com"
                 />
-              </div>
-              <div>
-                <Label htmlFor="new-admin-role">Role</Label>
-                <Select
-                  value={newRole}
-                  onValueChange={(value) => setNewRole(value as "admin" | "superadmin" | "")}
-                >
-                  <SelectTrigger id="new-admin-role" className="w-full">
-                    <SelectValue placeholder="Pilih role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="superadmin">Superadmin</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
               {formError ? <p className="text-sm text-rose-600">{formError}</p> : null}
             </div>
@@ -346,9 +326,9 @@ export default function PenggunaAdmin() {
           <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900">
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Ubah Role Pengguna</h2>
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Ubah Pengguna</h2>
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Pilih role baru untuk akun admin ini.
+                  Perbarui nama atau email pengguna.
                 </p>
               </div>
               <Button variant="ghost" size="icon" onClick={closeEdit}>
@@ -357,19 +337,22 @@ export default function PenggunaAdmin() {
             </div>
             <div className="grid gap-4">
               <div>
-                <Label htmlFor="edit-admin-role">Role</Label>
-                <Select
-                  value={editingUserRole}
-                  onValueChange={(value) => setEditingUserRole(value as "admin" | "superadmin" | "")}
-                >
-                  <SelectTrigger id="edit-admin-role" className="w-full">
-                    <SelectValue placeholder="Pilih role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="superadmin">Superadmin</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="edit-admin-name">Nama</Label>
+                <Input
+                  id="edit-admin-name"
+                  value={editingUserName}
+                  onChange={(e) => setEditingUserName(e.target.value)}
+                  placeholder="Nama lengkap"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-admin-email">Email</Label>
+                <Input
+                  id="edit-admin-email"
+                  value={editingUserEmail}
+                  onChange={(e) => setEditingUserEmail(e.target.value)}
+                  placeholder="admin@example.com"
+                />
               </div>
               {editError ? <p className="text-sm text-rose-600">{editError}</p> : null}
             </div>

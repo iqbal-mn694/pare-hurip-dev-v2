@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
 import {
   Home,
@@ -19,6 +20,7 @@ import {
 import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase/client"
 import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext"
+import { DevRoleSwitcher } from "@/components/layout/DevRoleSwitcher"
 
 const navItems = [
   { name: "Dashboard", href: "/admin/dashboard", icon: Home },
@@ -142,8 +144,14 @@ export function AdminLayout({ title, subtitle, children }: AdminLayoutProps) {
           )}
         >
           <div className="mb-8 flex items-center gap-3 px-2 text-slate-900 dark:text-slate-100">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-200">
-              <span className="text-sm font-semibold">PH</span>
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 dark:bg-emerald-900/20">
+              <Image
+                src="/images/logo.png"
+                alt="Pare Hurip"
+                width={40}
+                height={40}
+                className="rounded-2xl object-cover"
+              />
             </div>
             <div>
               <p className="text-sm font-semibold">Pare Hurip</p>
@@ -154,6 +162,11 @@ export function AdminLayout({ title, subtitle, children }: AdminLayoutProps) {
           <div className="flex-1 overflow-y-auto pr-1 pb-4">
             <nav className="space-y-1">
               {navItems.map((item) => {
+                // Hide the Pengguna Admin menu for non-superadmin roles
+                if (item.href === "/admin/pengguna-admin" && role !== "superadmin") {
+                  return null
+                }
+
                 const Icon = item.icon
                 const isActive =
                   activePath === item.href || activePath.startsWith(item.href)
@@ -221,6 +234,7 @@ export function AdminLayout({ title, subtitle, children }: AdminLayoutProps) {
               </div>
 
               <div className="relative flex items-center gap-3" ref={profileMenuRef}>
+                {process.env.NODE_ENV !== "production" ? <DevRoleSwitcher /> : null}
                 <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold tracking-[0.12em] text-emerald-900 dark:bg-emerald-900/25 dark:text-emerald-200">
                   {displayRole}
                 </span>
