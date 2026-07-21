@@ -30,7 +30,7 @@ export default function Page() {
             </h1>
             <p className="mt-4 text-base md:text-lg text-slate-600 dark:text-slate-300 max-w-lg">
               Data terbaru luas panen & harga beras di Tasikmalaya, plus prediksi
-              12 bulan ke depan berbasis Machine Learning & musiman.
+              12 bulan ke depan berbasis Deep Learning (LSTM & Transformer) & musiman.
             </p>
             <button
               onClick={scrollToLuasPanen}

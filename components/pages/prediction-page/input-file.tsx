@@ -1001,9 +1001,9 @@ Contoh : 124 menunjukkan bulan Januari dan 2024 "
               <CardDescription>
                 Grafik ini menyajikan proyeksi fase pertumbuhan padi untuk 12
                 bulan ke depan, berdasarkan pola historis dari data KSA
-                terakhir. Dengan algoritma support vector machine (SVM), kami
-                memprediksi transisi fase tanam, memungkinkan Anda untuk
-                mengantisipasi siklus pertanian mendatang per kecamatan di Kota
+                terakhir menggunakan algoritma prediksi deep learning LSTM dan Transformer. 
+                Dengan teknologi ini, kami memprediksi transisi fase tanam dengan akurasi tinggi, 
+                memungkinkan Anda untuk mengantisipasi siklus pertanian mendatang per kecamatan di Kota
                 Tasikmalaya.
               </CardDescription>
             </CardHeader>

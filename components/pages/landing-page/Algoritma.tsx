@@ -13,14 +13,14 @@ const Algoritma = () => {
   const features = [
     {
       icon: <CpuChipIcon className="w-8 h-8 text-green-600" />,
-      title: 'SVR - RBF Kernel',
-      desc: 'Support Vector Regression mampu menangkap pola non-linear (Multi Dimensi), sehingga dapat digunakan pada data berbasis musiman untuk memprediksi fase tanam dan luas panen hingga 12 bulan ke depan.',
+      title: 'LSTM',
+      desc: 'Long Short-Term Memory (LSTM) adalah model deep learning yang mampu mengingat pola jangka panjang pada data deret waktu (time-series), digunakan untuk memprediksi harga beras harian dan luas panen bulanan dengan akurasi tinggi hingga 12 bulan ke depan.',
       color: 'from-green-50 to-green-100',
     },
     {
       icon: <ChartBarIcon className="w-8 h-8 text-blue-600" />,
-      title: 'ARIMA',
-      desc: 'Model Time Series ARIMA dapat secara optimal memproyeksikan fluktuasi harga beras bulanan, memberi wawasan bagi petani & pedagang untuk antisipasi kenaikan dan penurunan harga.',
+      title: 'Transformer',
+      desc: 'Transformer adalah model deep learning dengan attention mechanism yang mampu menangkap dependensi jangka panjang dan pola multi-fitur pada data time-series. Teknologi ini memberikan prediksi akurat untuk harga beras dan produksi padi dengan pemahaman konteks yang mendalam.',
       color: 'from-blue-50 to-blue-100',
     },
     {
@@ -64,13 +64,13 @@ const Algoritma = () => {
         {/* Heading */}
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
-            Teknologi <span className="text-green-600">Machine Learning</span>{' '}
+            Teknologi <span className="text-green-600">Deep Learning</span>{' '}
             di Balik Prediksi
           </h2>
           <p className="mt-4 text-lg text-slate-600 max-w-3xl mx-auto">
-            Menggabungkan algoritma kecerdasan buatan Support Vector
-            Regression (SVR) dan ARIMA untuk hasil prediksi akurat, real-time,
-            dalam mendukung terwujudnya ketahanan pangan.
+            Menggabungkan model deep learning LSTM dan Transformer untuk hasil
+            prediksi akurat dan real-time dalam mendukung ketahanan pangan,
+            memberikan wawasan mendalam tentang fase tanam dan harga beras.
           </p>
         </div>
 
