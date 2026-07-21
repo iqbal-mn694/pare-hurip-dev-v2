@@ -35,6 +35,7 @@ const secondaryNavItem = {
 
 interface AdminLayoutProps {
   title: string
+  subtitle?: string
   children: React.ReactNode
 }
 
@@ -59,7 +60,7 @@ function sentenceCase(value: string) {
   return value ? value[0].toUpperCase() + value.slice(1).toLowerCase() : value
 }
 
-export function AdminLayout({ title, children }: AdminLayoutProps) {
+export function AdminLayout({ title, subtitle, children }: AdminLayoutProps) {
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = React.useState(false)
   const { role } = useAdminAuth()
@@ -81,7 +82,7 @@ export function AdminLayout({ title, children }: AdminLayoutProps) {
 
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-slate-200 bg-white px-4 py-6 shadow-sm transition-transform duration-200 dark:border-slate-800 dark:bg-slate-950 lg:static lg:h-full lg:w-72 lg:translate-x-0",
+            "fixed inset-y-0 left-0 z-50 flex h-screen w-72 flex-col border-r border-slate-200 bg-white px-4 py-6 shadow-sm transition-transform duration-200 dark:border-slate-800 dark:bg-slate-950 lg:sticky lg:top-0 lg:h-screen lg:w-72 lg:translate-x-0",
             sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           )}
         >
@@ -95,52 +96,52 @@ export function AdminLayout({ title, children }: AdminLayoutProps) {
             </div>
           </div>
 
-          <nav className="flex-1 space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon
-              const isActive =
-                activePath === item.href || activePath.startsWith(item.href)
+          <div className="flex-1 overflow-y-auto pr-1 pb-4">
+            <nav className="space-y-1">
+              {navItems.map((item) => {
+                const Icon = item.icon
+                const isActive =
+                  activePath === item.href || activePath.startsWith(item.href)
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "group flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-100"
-                      : "text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-                  )}
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <Icon className="size-4" />
-                  <span>{item.name}</span>
-                </Link>
-              )
-            })}
-          </nav>
-
-          <div className="mt-auto pt-4">
-            <div className="border-t border-slate-200 pt-4 text-slate-500 dark:border-slate-800 dark:text-slate-400">
-              {(() => {
-                const SecondaryIcon = secondaryNavItem.icon
                 return (
                   <Link
-                    href={secondaryNavItem.href}
+                    key={item.href}
+                    href={item.href}
                     className={cn(
                       "group flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition-colors",
-                      activePath === secondaryNavItem.href
+                      isActive
                         ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-100"
                         : "text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                     )}
                     onClick={() => setSidebarOpen(false)}
                   >
-                    <SecondaryIcon className="size-4" />
-                    <span>{secondaryNavItem.name}</span>
+                    <Icon className="size-4" />
+                    <span>{item.name}</span>
                   </Link>
                 )
-              })()}
-            </div>
+              })}
+            </nav>
+          </div>
+
+          <div className="border-t border-slate-200 pt-4 text-slate-500 dark:border-slate-800 dark:text-slate-400">
+            {(() => {
+              const SecondaryIcon = secondaryNavItem.icon
+              return (
+                <Link
+                  href={secondaryNavItem.href}
+                  className={cn(
+                    "group flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition-colors",
+                    activePath === secondaryNavItem.href
+                      ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-100"
+                      : "text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                  )}
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <SecondaryIcon className="size-4" />
+                  <span>{secondaryNavItem.name}</span>
+                </Link>
+              )
+            })()}
           </div>
         </aside>
 
@@ -158,6 +159,9 @@ export function AdminLayout({ title, children }: AdminLayoutProps) {
                 <div>
                   <p className="text-sm text-slate-500 dark:text-slate-400">Halaman Admin</p>
                   <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h1>
+                  {subtitle ? (
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>
+                  ) : null}
                 </div>
               </div>
 
