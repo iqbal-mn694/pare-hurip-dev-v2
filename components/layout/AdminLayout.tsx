@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   Home,
   Upload,
@@ -13,9 +13,11 @@ import {
   Settings,
   Menu,
   X,
+  LogOut,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { supabase } from "@/lib/supabase/client"
 import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext"
 
 const navItems = [
@@ -40,6 +42,16 @@ interface AdminLayoutProps {
 }
 
 function getInitials(source: string) {
+  const normalized = source.trim().toLowerCase()
+
+  if (normalized === "admin") {
+    return "AD"
+  }
+
+  if (normalized === "superadmin" || normalized === "super admin") {
+    return "SA"
+  }
+
   const words = source
     .split(/\s+/)
     .filter(Boolean)
@@ -62,12 +74,55 @@ function sentenceCase(value: string) {
 
 export function AdminLayout({ title, subtitle, children }: AdminLayoutProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = React.useState(false)
-  const { role } = useAdminAuth()
+  const [profileMenuOpen, setProfileMenuOpen] = React.useState(false)
+  const profileMenuRef = React.useRef<HTMLDivElement | null>(null)
+  const { role, setRole } = useAdminAuth()
 
   const activePath = pathname ?? "/admin/dashboard"
   const initials = getInitials(role || "Admin")
   const displayRole = sentenceCase(role || "Admin")
+
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setProfileMenuOpen(false)
+      }
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setProfileMenuOpen(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener("keydown", handleEscape)
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+      document.removeEventListener("keydown", handleEscape)
+    }
+  }, [])
+
+  const handleLogout = React.useCallback(async () => {
+    const confirmed = window.confirm("Yakin ingin keluar?")
+    if (!confirmed) {
+      return
+    }
+
+    setProfileMenuOpen(false)
+
+    try {
+      await supabase.auth.signOut()
+    } catch {
+      // TODO: Sign out akan efektif penuh begitu tim backend menyelesaikan integrasi sesi Supabase.
+    }
+
+    setRole("")
+    router.push("/admin/login")
+  }, [router, setRole])
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
@@ -88,7 +143,7 @@ export function AdminLayout({ title, subtitle, children }: AdminLayoutProps) {
         >
           <div className="mb-8 flex items-center gap-3 px-2 text-slate-900 dark:text-slate-100">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-200">
-              PH
+              <span className="text-sm font-semibold">PH</span>
             </div>
             <div>
               <p className="text-sm font-semibold">Pare Hurip</p>
@@ -165,13 +220,47 @@ export function AdminLayout({ title, subtitle, children }: AdminLayoutProps) {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="relative flex items-center gap-3" ref={profileMenuRef}>
                 <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold tracking-[0.12em] text-emerald-900 dark:bg-emerald-900/25 dark:text-emerald-200">
                   {displayRole}
                 </span>
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-200">
+                <button
+                  type="button"
+                  onClick={() => setProfileMenuOpen((value) => !value)}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-900 transition hover:bg-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-200 dark:hover:bg-emerald-900/30"
+                  aria-haspopup="menu"
+                  aria-expanded={profileMenuOpen}
+                  aria-label="Buka menu profil"
+                >
                   <span className="text-sm font-semibold">{initials}</span>
-                </div>
+                </button>
+
+                {profileMenuOpen ? (
+                  <div className="absolute right-0 top-full z-30 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-3 shadow-lg dark:border-slate-800 dark:bg-slate-900">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-100 text-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-200">
+                        <span className="text-sm font-semibold">{initials}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                          {displayRole}
+                        </p>
+                        <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                          admin@bps-tasikmalaya.go.id
+                        </p>
+                      </div>
+                    </div>
+                    <div className="my-3 h-px bg-slate-200 dark:bg-slate-800" />
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm font-medium text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950/30"
+                    >
+                      <LogOut className="size-4" />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                ) : null}
               </div>
             </div>
           </header>
