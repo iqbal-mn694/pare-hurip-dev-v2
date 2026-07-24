@@ -9,14 +9,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname()
   const { role, loading } = useAdminAuth()
 
+  const isLoginPage = pathname === "/admin/login"
+
   React.useEffect(() => {
-    // Halaman login ada di luar folder /admin, jadi layout ini tidak
-    // membungkusnya -- tapi kalau strukturmu beda, tambahkan pengecualian
-    // path di sini.
-    if (!loading && !role) {
-      router.replace("/login")
+    if (!isLoginPage && !loading && !role) {
+      router.replace("/admin/login")
     }
-  }, [loading, role, router, pathname])
+  }, [isLoginPage, loading, role, router])
+
+  // Halaman login harus dirender apa adanya, tanpa guard —
+  // Login.tsx sudah punya logic loading/redirect sendiri.
+  if (isLoginPage) {
+    return <>{children}</>
+  }
 
   if (loading || !role) {
     return (

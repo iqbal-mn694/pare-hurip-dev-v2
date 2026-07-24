@@ -34,6 +34,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   React.useEffect(() => {
+    console.log("[AdminAuth] effect started, calling getUser()")
     supabase.auth.getUser().then(({ data: { user }, error }) => {
       console.log("[AdminAuth] getUser:", { userId: user?.id, error })
       if (user) {
@@ -43,6 +44,10 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
         setName("")
         setEmail("")
       }
+      console.log("[AdminAuth] calling setLoading(false)")
+      setLoading(false)
+    }).catch((err) => {
+      console.error("[AdminAuth] getUser THREW an error:", err)
       setLoading(false)
     })
 
