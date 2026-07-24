@@ -44,27 +44,17 @@ interface AdminLayoutProps {
 }
 
 function getInitials(source: string) {
-  const normalized = source.trim().toLowerCase()
-
-  if (normalized === "admin") {
-    return "AD"
-  }
-
-  if (normalized === "superadmin" || normalized === "super admin") {
-    return "SA"
-  }
-
   const words = source
+    .trim()
     .split(/\s+/)
     .filter(Boolean)
-    .map((word) => word.trim())
 
   if (words.length === 0) {
     return "PH"
   }
 
   if (words.length === 1) {
-    return words[0].slice(0, 2).replace(/[^A-Za-z]/g, "") || "PH"
+    return words[0].slice(0, 2).toUpperCase().replace(/[^A-Z]/g, "") || "PH"
   }
 
   return (words[0][0] + words[1][0]).toUpperCase()
@@ -80,11 +70,15 @@ export function AdminLayout({ title, subtitle, children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = React.useState(false)
   const [profileMenuOpen, setProfileMenuOpen] = React.useState(false)
   const profileMenuRef = React.useRef<HTMLDivElement | null>(null)
-  const { role, setRole } = useAdminAuth()
+  const { role, name, email, setRole } = useAdminAuth()
 
   const activePath = pathname ?? "/admin/dashboard"
-  const initials = getInitials(role || "Admin")
   const displayRole = sentenceCase(role || "Admin")
+  const displayName = name || displayRole
+  const displayEmail = email || "-"
+  const initials = getInitials(name || displayRole)
+  console.log("VERSI_BARU_ADMINLAYOUT", { name, email, role })
+  
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -162,7 +156,6 @@ export function AdminLayout({ title, subtitle, children }: AdminLayoutProps) {
           <div className="flex-1 overflow-y-auto pr-1 pb-4">
             <nav className="space-y-1">
               {navItems.map((item) => {
-                // Hide the Pengguna Admin menu for non-superadmin roles
                 if (item.href === "/admin/pengguna-admin" && role !== "superadmin") {
                   return null
                 }
@@ -257,10 +250,10 @@ export function AdminLayout({ title, subtitle, children }: AdminLayoutProps) {
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                          {displayRole}
+                          {displayName}
                         </p>
                         <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                          admin@bps-tasikmalaya.go.id
+                          {displayEmail}
                         </p>
                       </div>
                     </div>

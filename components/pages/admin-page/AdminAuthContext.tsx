@@ -5,6 +5,8 @@ import { supabase } from "@/lib/supabase/client"
 
 interface AdminAuthContextValue {
   role: string
+  name: string
+  email: string
   setRole: (value: string) => void
   loading: boolean
   signOut: () => Promise<void>
@@ -14,17 +16,21 @@ const AdminAuthContext = React.createContext<AdminAuthContextValue | null>(null)
 
 export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = React.useState("")
+  const [name, setName] = React.useState("")
+  const [email, setEmail] = React.useState("")
   const [loading, setLoading] = React.useState(true)
 
   const loadRole = React.useCallback(async (userId: string) => {
     const { data: profile, error } = await supabase
       .from("profiles")
-      .select("role")
+      .select("name, email, role")
       .eq("id", userId)
       .single()
 
     console.log("[AdminAuth] loadRole:", { profile, error })
     setRole(profile?.role ?? "")
+    setName(profile?.name ?? "")
+    setEmail(profile?.email ?? "")
   }, [])
 
   React.useEffect(() => {
@@ -34,6 +40,8 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
         loadRole(user.id)
       } else {
         setRole("")
+        setName("")
+        setEmail("")
       }
       setLoading(false)
     })
@@ -44,6 +52,8 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
         loadRole(session.user.id)
       } else {
         setRole("")
+        setName("")
+        setEmail("")
       }
     })
 
@@ -53,10 +63,12 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = React.useCallback(async () => {
     await supabase.auth.signOut()
     setRole("")
+    setName("")
+    setEmail("")
   }, [])
 
   return (
-    <AdminAuthContext.Provider value={{ role, setRole, loading, signOut }}>
+    <AdminAuthContext.Provider value={{ role, name, email, setRole, loading, signOut }}>
       {children}
     </AdminAuthContext.Provider>
   )
