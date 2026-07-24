@@ -20,7 +20,6 @@ import {
 import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase/client"
 import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext"
-import { DevRoleSwitcher } from "@/components/layout/DevRoleSwitcher"
 
 const navItems = [
   { name: "Dashboard", href: "/admin/dashboard", icon: Home },
@@ -233,8 +232,7 @@ export function AdminLayout({ title, subtitle, children }: AdminLayoutProps) {
                 </div>
               </div>
 
-              <div className="relative flex items-center gap-3" ref={profileMenuRef}>
-                {process.env.NODE_ENV !== "production" ? <DevRoleSwitcher /> : null}
+              <div className="flex items-center gap-3">
                 <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold tracking-[0.12em] text-emerald-900 dark:bg-emerald-900/25 dark:text-emerald-200">
                   {displayRole}
                 </span>
