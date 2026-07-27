@@ -68,6 +68,7 @@ export function AdminLayout({ title, subtitle, children }: AdminLayoutProps) {
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = React.useState(false)
   const [profileMenuOpen, setProfileMenuOpen] = React.useState(false)
+  const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false)
   const profileMenuRef = React.useRef<HTMLDivElement | null>(null)
   const { role, name, email, setRole } = useAdminAuth()
 
@@ -101,13 +102,26 @@ export function AdminLayout({ title, subtitle, children }: AdminLayoutProps) {
     }
   }, [])
 
-  const handleLogout = React.useCallback(async () => {
-    const confirmed = window.confirm("Yakin ingin keluar?")
-    if (!confirmed) {
-      return
+  React.useEffect(() => {
+    if (!showLogoutConfirm) return
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowLogoutConfirm(false)
+      }
     }
 
+    document.addEventListener("keydown", handleEscape)
+    return () => document.removeEventListener("keydown", handleEscape)
+  }, [showLogoutConfirm])
+
+const openLogoutConfirm = React.useCallback(() => {
     setProfileMenuOpen(false)
+    setShowLogoutConfirm(true)
+  }, [])
+
+  const confirmLogout = React.useCallback(async () => {
+    setShowLogoutConfirm(false)
 
     try {
       await supabase.auth.signOut()
@@ -258,7 +272,7 @@ export function AdminLayout({ title, subtitle, children }: AdminLayoutProps) {
                     <div className="my-3 h-px bg-slate-200 dark:bg-slate-800" />
                     <button
                       type="button"
-                      onClick={handleLogout}
+                      onClick={openLogoutConfirm}
                       className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm font-medium text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950/30"
                     >
                       <LogOut className="size-4" />
@@ -270,9 +284,47 @@ export function AdminLayout({ title, subtitle, children }: AdminLayoutProps) {
             </div>
           </header>
 
-          <main className="flex-1 px-4 py-6">{children}</main>
+<main className="flex-1 px-4 py-6">{children}</main>
         </div>
       </div>
+
+      {showLogoutConfirm ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4"
+          onClick={() => setShowLogoutConfirm(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400">
+              <LogOut className="size-5" />
+            </div>
+            <h2 className="mt-4 text-lg font-semibold text-slate-900 dark:text-slate-100">
+              Konfirmasi Keluar
+            </h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Anda akan keluar dari sesi admin. Pastikan semua perubahan sudah tersimpan.
+            </p>
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={confirmLogout}
+                className="flex-1 rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700"
+              >
+                Ya, Keluar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
