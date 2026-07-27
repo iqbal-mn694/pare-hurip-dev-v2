@@ -240,9 +240,6 @@ const openLogoutConfirm = React.useCallback(() => {
               </div>
 
               <div className="flex items-center gap-3">
-                <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold tracking-[0.12em] text-emerald-900 dark:bg-emerald-900/25 dark:text-emerald-200">
-                  {displayRole}
-                </span>
                 <button
                   type="button"
                   onClick={() => setProfileMenuOpen((value) => !value)}

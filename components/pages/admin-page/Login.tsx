@@ -3,7 +3,8 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Eye, EyeOff, ShieldCheck } from "lucide-react"
+import Image from "next/image"
+import { Eye, EyeOff } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -112,11 +113,11 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-10 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div className="mx-auto flex w-full max-w-md flex-col gap-6">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-slate-50 px-4 py-10 text-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:text-slate-100">
+        <div className="mx-auto flex w-full max-w-md flex-col gap-8">
         <div className="text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-3xl bg-emerald-100 text-emerald-800 shadow-sm dark:bg-emerald-900/20 dark:text-emerald-200">
-            <ShieldCheck className="size-7" />
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-3xl bg-emerald-100 dark:bg-emerald-900/20">
+            <Image src="/images/logo.png" alt="Pare Hurip" width={48} height={48} className="rounded-2xl object-cover" />
           </div>
           <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
             Pare Hurip Admin
@@ -126,8 +127,8 @@ export default function Login() {
           </p>
         </div>
 
-        <Card className="shadow-sm">
-          <CardContent className="space-y-5 px-6 py-8">
+        <Card className="shadow-xl">
+          <CardContent className="space-y-5 px-8 py-8">
             <form className="space-y-5" onSubmit={onSubmit} noValidate>
               {errors.form ? (
                 <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">

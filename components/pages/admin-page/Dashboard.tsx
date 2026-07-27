@@ -13,6 +13,7 @@ import {
 import { cn } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { supabase } from "@/lib/supabase/client"
+import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext"
 
 interface KecamatanRef {
   id: string
@@ -83,6 +84,54 @@ function formatRelativeTime(value: string | null) {
   if (diffDay < 7) return `${diffDay} hari lalu`
 
   return date.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
+}
+
+function getCardAccent(
+  title: string,
+  value?: string
+): { iconBg: string; iconColor: string; borderColor: string } {
+  switch (title) {
+    case "Total segmen":
+      return {
+        iconBg: "bg-blue-100 dark:bg-blue-900/20",
+        iconColor: "text-blue-700 dark:text-blue-200",
+        borderColor: "border-l-blue-400",
+      }
+    case "Observasi bulan berjalan":
+      return {
+        iconBg: "bg-emerald-100 dark:bg-emerald-900/20",
+        iconColor: "text-emerald-700 dark:text-emerald-200",
+        borderColor: "border-l-emerald-400",
+      }
+    case "Kecamatan lengkap": {
+      const [done, total] = (value ?? "").split("/")
+      const allComplete = done === total && total !== undefined
+      if (allComplete) {
+        return {
+          iconBg: "bg-emerald-100 dark:bg-emerald-900/20",
+          iconColor: "text-emerald-700 dark:text-emerald-200",
+          borderColor: "border-l-emerald-400",
+        }
+      }
+      return {
+        iconBg: "bg-amber-100 dark:bg-amber-900/20",
+        iconColor: "text-amber-700 dark:text-amber-200",
+        borderColor: "border-l-amber-400",
+      }
+    }
+    case "Versi model aktif":
+      return {
+        iconBg: "bg-indigo-100 dark:bg-indigo-900/20",
+        iconColor: "text-indigo-700 dark:text-indigo-200",
+        borderColor: "border-l-indigo-400",
+      }
+    default:
+      return {
+        iconBg: "bg-emerald-100 dark:bg-emerald-900/20",
+        iconColor: "text-emerald-700 dark:text-emerald-200",
+        borderColor: "border-l-emerald-400",
+      }
+  }
 }
 
 export default function Dashboard() {
@@ -205,16 +254,53 @@ export default function Dashboard() {
     { title: "Versi model aktif", value: modelVersion, icon: Settings },
   ]
 
+  const { name, role } = useAdminAuth()
+  const needyCount = kecamatanProgress.filter((k) => k.percent < 80).length
+  const goodKec = kecamatanProgress.filter((k) => k.percent >= 80)
+  const warningKec = kecamatanProgress.filter((k) => k.percent >= 40 && k.percent < 80)
+  const criticalKec = kecamatanProgress.filter((k) => k.percent < 40)
+
   return (
     <div className="space-y-6">
+      <div className="mb-6">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Selamat datang kembali
+        </p>
+        <h1 className="text-2xl font-bold capitalize text-slate-900 dark:text-slate-100">
+          {name || (role === "superadmin" ? "Superadmin" : "Admin")}
+        </h1>
+        <p
+          className={cn(
+            "mt-1 text-sm",
+            needyCount > 0
+              ? "text-amber-600 dark:text-amber-400"
+              : "text-emerald-600 dark:text-emerald-400"
+          )}
+        >
+          {needyCount > 0
+            ? `${needyCount} kecamatan masih memerlukan pelengkapan data bulan ini.`
+            : "Semua kecamatan sudah melengkapi data bulan ini."}
+        </p>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {summaryItems.map((item) => {
           const Icon = item.icon
+          const accent = getCardAccent(item.title, item.value)
           return (
-            <Card key={item.title} className="rounded-xl border shadow-sm">
+            <Card
+              key={item.title}
+              className={cn("rounded-xl border shadow-sm border-l-4", accent.borderColor)}
+            >
               <CardHeader className="px-5 pt-5">
                 <div className="flex items-center gap-3">
-                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-200">
+                  <span
+                    className={cn(
+                      "inline-flex h-10 w-10 items-center justify-center rounded-2xl",
+                      accent.iconBg,
+                      accent.iconColor
+                    )}
+                  >
                     <Icon className="size-5" />
                   </span>
                   <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
@@ -223,7 +309,7 @@ export default function Dashboard() {
                 </div>
               </CardHeader>
               <CardContent className="px-5 pb-5 pt-3">
-                <p className="text-3xl font-semibold text-slate-900 dark:text-slate-100">
+                <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">
                   {item.value}
                 </p>
               </CardContent>
@@ -237,24 +323,96 @@ export default function Dashboard() {
           <CardHeader className="px-5 pb-0 pt-4">
             <CardTitle className="mb-0">Status Kelengkapan Data per Kecamatan</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 px-5 pb-5 pt-0">
-            {kecamatanProgress.map((item) => (
-              <div key={item.name} className="space-y-2">
-                <div className="flex items-center justify-between text-sm font-medium text-slate-700 dark:text-slate-200">
-                  <span>{item.name}</span>
-                  <span>{item.percent}%</span>
+          <CardContent className="px-5 pb-5 pt-0">
+            {goodKec.length ? (
+              <div>
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-200">
+                    Baik ({goodKec.length} kecamatan)
+                  </span>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+                {goodKec.map((item) => (
                   <div
-                    className={cn(
-                      "h-full rounded-full transition-all duration-300",
-                      getProgressColor(item.percent)
-                    )}
-                    style={{ width: `${item.percent}%` }}
-                  />
-                </div>
+                    key={item.name}
+                    className="space-y-2 rounded-xl px-2 py-2 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                  >
+                    <div className="flex items-center justify-between text-sm font-medium text-slate-700 dark:text-slate-200">
+                      <span>{item.name}</span>
+                      <span>{item.percent}%</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all duration-300",
+                          getProgressColor(item.percent)
+                        )}
+                        style={{ width: `${item.percent}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            ) : null}
+
+            {warningKec.length ? (
+              <div className="mt-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+                    Perlu Perhatian ({warningKec.length} kecamatan)
+                  </span>
+                </div>
+                {warningKec.map((item) => (
+                  <div
+                    key={item.name}
+                    className="space-y-2 rounded-xl px-2 py-2 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                  >
+                    <div className="flex items-center justify-between text-sm font-medium text-slate-700 dark:text-slate-200">
+                      <span>{item.name}</span>
+                      <span>{item.percent}%</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all duration-300",
+                          getProgressColor(item.percent)
+                        )}
+                        style={{ width: `${item.percent}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {criticalKec.length ? (
+              <div className="mt-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-800 dark:bg-red-900/20 dark:text-red-200">
+                    Kritis ({criticalKec.length} kecamatan)
+                  </span>
+                </div>
+                {criticalKec.map((item) => (
+                  <div
+                    key={item.name}
+                    className="space-y-2 rounded-xl px-2 py-2 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                  >
+                    <div className="flex items-center justify-between text-sm font-medium text-slate-700 dark:text-slate-200">
+                      <span>{item.name}</span>
+                      <span>{item.percent}%</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all duration-300",
+                          getProgressColor(item.percent)
+                        )}
+                        style={{ width: `${item.percent}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -266,7 +424,10 @@ export default function Dashboard() {
             {activityLogs.map((item) => {
               const Icon = getActivityIcon(item.module)
               return (
-                <div key={item.id} className="flex items-start gap-3 rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
+                <div
+                  key={item.id}
+                  className="flex items-start gap-3 rounded-3xl border border-slate-200 bg-slate-50 p-4 transition-colors hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800/50"
+                >
                   <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-200">
                     <Icon className="size-5" />
                   </span>

@@ -152,7 +152,7 @@ export default function ModelPrediksi() {
           Ringkasan Evaluasi Model
         </h2>
         <div className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900">
+          <div className="rounded-2xl border border-slate-200 bg-blue-50/40 p-5 dark:border-slate-800 dark:bg-blue-950/10 border-l-4 border-l-blue-400">
             <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
               Evaluasi Klasifikasi (Fase Tanam)
             </p>
@@ -186,7 +186,7 @@ export default function ModelPrediksi() {
               </div>
             </div>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900">
+          <div className="rounded-2xl border border-slate-200 bg-purple-50/40 p-5 dark:border-slate-800 dark:bg-purple-950/10 border-l-4 border-l-purple-400">
             <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
               Evaluasi Regresi (Harga Beras)
             </p>
