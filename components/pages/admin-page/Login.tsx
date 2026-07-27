@@ -33,8 +33,6 @@ export default function Login() {
   const [errors, setErrors] = React.useState<LoginErrors>({})
   const [loading, setLoading] = React.useState(false)
 
-  // Kalau ternyata sudah login (role sudah ada), langsung lempar ke dashboard
-  // -- jangan tampilkan form login lagi.
   React.useEffect(() => {
   console.log("[Login] guard check:", { authLoading, currentRole })
   if (!authLoading && currentRole) {
@@ -105,8 +103,6 @@ export default function Login() {
     router.refresh()
   }
 
-  // Selagi status login masih dicek, atau ternyata sudah login (lagi redirect),
-  // jangan tampilkan form dulu supaya tidak sempat "kedip".
   if (authLoading || currentRole) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">

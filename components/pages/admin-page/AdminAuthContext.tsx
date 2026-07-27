@@ -4,6 +4,7 @@ import * as React from "react"
 import { supabase } from "@/lib/supabase/client"
 
 interface AdminAuthContextValue {
+  id: string
   role: string
   name: string
   email: string
@@ -15,6 +16,7 @@ interface AdminAuthContextValue {
 const AdminAuthContext = React.createContext<AdminAuthContextValue | null>(null)
 
 export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
+  const [id, setId] = React.useState("")
   const [role, setRole] = React.useState("")
   const [name, setName] = React.useState("")
   const [email, setEmail] = React.useState("")
@@ -28,6 +30,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
       .single()
 
     console.log("[AdminAuth] loadRole:", { profile, error })
+    setId(userId)
     setRole(profile?.role ?? "")
     setName(profile?.name ?? "")
     setEmail(profile?.email ?? "")
@@ -40,6 +43,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
       if (user) {
         loadRole(user.id)
       } else {
+        setId("")
         setRole("")
         setName("")
         setEmail("")
@@ -56,6 +60,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         loadRole(session.user.id)
       } else {
+        setId("")
         setRole("")
         setName("")
         setEmail("")
@@ -67,13 +72,14 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = React.useCallback(async () => {
     await supabase.auth.signOut()
+    setId("")
     setRole("")
     setName("")
     setEmail("")
   }, [])
 
   return (
-    <AdminAuthContext.Provider value={{ role, name, email, setRole, loading, signOut }}>
+    <AdminAuthContext.Provider value={{ id, role, name, email, setRole, loading, signOut }}>
       {children}
     </AdminAuthContext.Provider>
   )
@@ -85,4 +91,4 @@ export function useAdminAuth() {
     throw new Error("useAdminAuth must be used within AdminAuthProvider")
   }
   return context
-}
+} 

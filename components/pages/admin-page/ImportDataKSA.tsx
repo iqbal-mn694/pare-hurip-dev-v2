@@ -1,6 +1,7 @@
 "use client"
 
 import { supabase } from "@/lib/supabase/client"
+import { logActivity } from "@/lib/supabase/activity-log"
 import * as React from "react"
 import * as XLSX from "xlsx"
 import { AlertTriangle, CheckCircle, Download, Upload, XCircle } from "lucide-react"
@@ -39,7 +40,9 @@ type ImportRow = {
 
 type ValidatedImportRow = ImportRow & {
   errors: string[]
+  autoFixes: string[]
   isDuplicate: boolean
+  skip: boolean
 }
 
 function normalizeField(value: unknown) {
@@ -50,38 +53,82 @@ function buildDummyRows(): ImportRow[] {
   return [...DUMMY_LONG_FORMAT_ROWS]
 }
 
-function validateImportRows(rows: ImportRow[]): ValidatedImportRow[] {
-  const keyCount = new Map<string, number>()
+function tryFixIdSegmen(raw: string): { value: string; fixed: boolean } | null {
+  if (/^\d{9}$/.test(raw)) return { value: raw, fixed: false }
 
-  rows.forEach((row) => {
+  const digitsOnly = raw.replace(/\D/g, "")
+
+  if (digitsOnly.length === 9) return { value: digitsOnly, fixed: true }
+  if (digitsOnly.length === 8) return { value: `0${digitsOnly}`, fixed: true }
+
+  return null
+}
+
+function tryFixFaseTanam(raw: string): { value: string; fixed: boolean } | null {
+  if (VALID_PHASE_CODES.has(raw)) return { value: raw, fixed: false }
+
+  const asNumber = Number(raw)
+  if (!isNaN(asNumber)) {
+    const rounded = Math.round(asNumber)
+    const clamped = Math.min(8, Math.max(1, rounded))
+    if (clamped >= 1 && clamped <= 8) {
+      return { value: String(clamped), fixed: true }
+    }
+  }
+
+  return null
+}
+
+function validateImportRows(rows: ImportRow[]): ValidatedImportRow[] {
+  const fixedRows = rows.map((row) => {
+    const errors: string[] = []
+    const autoFixes: string[] = []
+
+    let id_segmen = row.id_segmen
+    const idFix = tryFixIdSegmen(row.id_segmen)
+    if (idFix) {
+      id_segmen = idFix.value
+      if (idFix.fixed) autoFixes.push(`ID segmen dikoreksi jadi "${idFix.value}"`)
+    } else {
+      errors.push("ID segmen harus 9 digit angka")
+    }
+
+    let fase_tanam = row.fase_tanam
+    const faseFix = tryFixFaseTanam(row.fase_tanam)
+    if (faseFix) {
+      fase_tanam = faseFix.value
+      if (faseFix.fixed) autoFixes.push(`fase_tanam dikoreksi jadi "${faseFix.value}"`)
+    } else {
+      errors.push("fase_tanam tidak valid")
+    }
+
+    return { ...row, id_segmen, fase_tanam, errors, autoFixes }
+  })
+
+  const keyCount = new Map<string, number>()
+  fixedRows.forEach((row) => {
     const key = `${row.id_segmen}|${row.subsegmen}|${row.periode}`
     keyCount.set(key, (keyCount.get(key) ?? 0) + 1)
   })
 
-  return rows.map((row) => {
-    const errors: string[] = []
-    const idSegmenValue = row.id_segmen
-    const faseValue = row.fase_tanam
+  const seenKeys = new Set<string>()
+
+  return fixedRows.map((row) => {
     const key = `${row.id_segmen}|${row.subsegmen}|${row.periode}`
-
-    if (!/^\d{9}$/.test(idSegmenValue)) {
-      errors.push("ID segmen harus 9 digit angka")
-    }
-
-    if (!VALID_PHASE_CODES.has(faseValue)) {
-      errors.push("fase_tanam tidak valid")
-    }
-
     const isDuplicate = (keyCount.get(key) ?? 0) > 1
+    let skip = false
+
     if (isDuplicate) {
-      errors.push("Duplikat kombinasi segmen + subsegmen + periode")
+      if (seenKeys.has(key)) {
+        row.errors.push("Duplikat kombinasi segmen + subsegmen + periode (baris ini dilewati otomatis)")
+        skip = true
+      } else {
+        row.autoFixes.push("Duplikat ditemukan -- baris pertama ini yang akan disimpan")
+      }
+      seenKeys.add(key)
     }
 
-    return {
-      ...row,
-      errors,
-      isDuplicate,
-    }
+    return { ...row, isDuplicate, skip }
   })
 }
 
@@ -169,9 +216,10 @@ export default function ImportDataKSA() {
   const [isSaving, setIsSaving] = React.useState(false)
   const [saveError, setSaveError] = React.useState<string>("")
 
-  const validRowCount = rows.filter((row) => row.errors.length === 0).length
+  const savableRows = rows.filter((row) => row.errors.length === 0 && !row.skip)
+  const validRowCount = savableRows.length
   const invalidRowCount = rows.length - validRowCount
-  const hasErrors = invalidRowCount > 0
+  const autoFixedCount = rows.filter((row) => row.autoFixes.length > 0 && row.errors.length === 0).length
 
   const handleDownloadTemplate = () => {
     const templateRows = [
@@ -221,46 +269,60 @@ export default function ImportDataKSA() {
   }
 
   const handleSaveToDatabase = async () => {
-  setIsSaving(true)
-  setSaveError("")
+    setIsSaving(true)
+    setSaveError("")
 
-  const payload = rows.map(({ errors, isDuplicate, ...row }) => row)
+    const payload = savableRows.map(({ id_segmen, subsegmen, periode, fase_tanam }) => ({
+      id_segmen,
+      subsegmen,
+      periode,
+      fase_tanam: Number(fase_tanam),
+    }))
 
-  try {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      setSaveError("Silakan login kembali.")
+    if (payload.length === 0) {
+      setSaveError("Tidak ada baris valid untuk disimpan.")
+      setIsSaving(false)
       return
     }
 
-    const response = await fetch("/api/admin/admin/import-ksa", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ rows: payload }),
-    })
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
 
-    const result = await response.json()
+      const rowsToInsert = payload.map((row) => ({
+        ...row,
+        created_by: user?.id ?? null,
+      }))
 
-    if (!response.ok) {
-      setSaveError(result?.error || "Gagal menyimpan data ke database.")
-      return
+      const { error, count } = await supabase
+        .from("ksa_segments")
+        .upsert(rowsToInsert, { onConflict: "id_segmen,subsegmen,periode", count: "exact" })
+
+      if (error) {
+        setSaveError(error.message || "Gagal menyimpan data ke database.")
+        return
+      }
+
+      const savedRowCount = count ?? payload.length
+
+      await logActivity({
+        actorId: user?.id ?? null,
+        actorName: user?.email ?? "Admin",
+        actionType: "import_data",
+        description: `Mengunggah ${savedRowCount} baris data KSA baru`,
+        module: "import_data",
+      })
+
+      setSavedCount(savedRowCount)
+      setStage("saved")
+    } catch (error) {
+      console.error(error)
+      setSaveError("Terjadi kesalahan jaringan. Coba lagi.")
+    } finally {
+      setIsSaving(false)
     }
-
-    setSavedCount(result.savedCount ?? payload.length)
-    setStage("saved")
-  } catch (error) {
-    console.error(error)
-    setSaveError("Terjadi kesalahan jaringan. Coba lagi.")
-  } finally {
-    setIsSaving(false)
   }
-}
 
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault()
@@ -375,11 +437,17 @@ export default function ImportDataKSA() {
             <CardContent className="space-y-4 px-5 pb-5">
               <div className="flex flex-wrap gap-4">
                 <div className="rounded-3xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-                  <p className="font-semibold">Baris valid</p>
+                  <p className="font-semibold">Baris siap disimpan</p>
                   <p>{validRowCount}</p>
                 </div>
+                {autoFixedCount > 0 && (
+                  <div className="rounded-3xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    <p className="font-semibold">Otomatis diperbaiki</p>
+                    <p>{autoFixedCount}</p>
+                  </div>
+                )}
                 <div className="rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
-                  <p className="font-semibold">Baris bermasalah</p>
+                  <p className="font-semibold">Dilewati (invalid/duplikat)</p>
                   <p>{invalidRowCount}</p>
                 </div>
               </div>
@@ -397,22 +465,34 @@ export default function ImportDataKSA() {
                   </TableHeader>
                   <TableBody>
                     {rows.map((row, index) => {
-                      const rowHasError = row.errors.length > 0
+                      const rowHasBlockingError = row.errors.length > 0
+                      const rowHasAutoFix = row.autoFixes.length > 0 && !rowHasBlockingError
                       return (
                         <TableRow
                           key={`${row.id_segmen}-${row.subsegmen}-${row.periode}-${index}`}
-                          className={rowHasError ? "bg-rose-50 dark:bg-rose-950/40" : ""}
+                          className={
+                            rowHasBlockingError
+                              ? "bg-rose-50 dark:bg-rose-950/40"
+                              : rowHasAutoFix
+                              ? "bg-amber-50 dark:bg-amber-950/20"
+                              : ""
+                          }
                         >
                           <TableCell>{row.id_segmen}</TableCell>
                           <TableCell>{row.subsegmen}</TableCell>
                           <TableCell>{row.periode}</TableCell>
                           <TableCell>{row.fase_tanam}</TableCell>
-                          <TableCell className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                            {rowHasError ? (
-                              <>
-                                <AlertTriangle className="size-4 text-rose-600" />
+                          <TableCell className="text-sm text-slate-600 dark:text-slate-300">
+                            {rowHasBlockingError ? (
+                              <div className="flex items-start gap-2">
+                                <XCircle className="mt-0.5 size-4 shrink-0 text-rose-600" />
                                 <span>{row.errors.join(", ")}</span>
-                              </>
+                              </div>
+                            ) : rowHasAutoFix ? (
+                              <div className="flex items-start gap-2">
+                                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
+                                <span>{row.autoFixes.join(", ")}</span>
+                              </div>
                             ) : (
                               <span className="text-emerald-700">Valid</span>
                             )}
@@ -435,8 +515,10 @@ export default function ImportDataKSA() {
                 <Button variant="outline" onClick={resetUploader} disabled={isSaving}>
                   Batal
                 </Button>
-                <Button disabled={hasErrors || isSaving} onClick={handleSaveToDatabase}>
-                  {isSaving ? "Menyimpan..." : "Simpan ke Database"}
+                <Button disabled={validRowCount === 0 || isSaving} onClick={handleSaveToDatabase}>
+                  {isSaving
+                    ? "Menyimpan..."
+                    : `Simpan ${validRowCount} Baris ke Database`}
                 </Button>
               </div>
             </CardContent>

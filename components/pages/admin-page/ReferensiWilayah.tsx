@@ -22,6 +22,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { supabase } from "@/lib/supabase/client"
+import { logActivity } from "@/lib/supabase/activity-log"
+import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext"
 
 const TABS = ["Kecamatan", "Segmen", "Subsegmen"] as const
 
@@ -45,75 +48,6 @@ type Subsegmen = {
   kode_subsegmen: string
 }
 
-const INITIAL_KECAMATAN: Kecamatan[] = [
-  { id: "kec-1", kode_kecamatan: "K001", nama_kecamatan: "Cibeureum" },
-  { id: "kec-2", kode_kecamatan: "K002", nama_kecamatan: "Mangkubumi" },
-  { id: "kec-3", kode_kecamatan: "K003", nama_kecamatan: "Lengkongsari" },
-  { id: "kec-4", kode_kecamatan: "K004", nama_kecamatan: "Cihideung" },
-  { id: "kec-5", kode_kecamatan: "K005", nama_kecamatan: "Cipedes" },
-  { id: "kec-6", kode_kecamatan: "K006", nama_kecamatan: "Purbaratu" },
-  { id: "kec-7", kode_kecamatan: "K007", nama_kecamatan: "Indihiang" },
-  { id: "kec-8", kode_kecamatan: "K008", nama_kecamatan: "Tawang" },
-  { id: "kec-9", kode_kecamatan: "K009", nama_kecamatan: "Cipatujah" },
-  { id: "kec-10", kode_kecamatan: "K010", nama_kecamatan: "Cipari" },
-]
-
-const INITIAL_SEGMEN: Segmen[] = [
-  { id: "seg-1", id_segmen: "K001001", kecamatan_id: "kec-1" },
-  { id: "seg-2", id_segmen: "K001002", kecamatan_id: "kec-1" },
-  { id: "seg-3", id_segmen: "K002001", kecamatan_id: "kec-2" },
-  { id: "seg-4", id_segmen: "K002002", kecamatan_id: "kec-2" },
-  { id: "seg-5", id_segmen: "K003001", kecamatan_id: "kec-3" },
-  { id: "seg-6", id_segmen: "K003002", kecamatan_id: "kec-3" },
-  { id: "seg-7", id_segmen: "K004001", kecamatan_id: "kec-4" },
-  { id: "seg-8", id_segmen: "K004002", kecamatan_id: "kec-4" },
-  { id: "seg-9", id_segmen: "K005001", kecamatan_id: "kec-5" },
-  { id: "seg-10", id_segmen: "K005002", kecamatan_id: "kec-5" },
-  { id: "seg-11", id_segmen: "K006001", kecamatan_id: "kec-6" },
-  { id: "seg-12", id_segmen: "K006002", kecamatan_id: "kec-6" },
-  { id: "seg-13", id_segmen: "K007001", kecamatan_id: "kec-7" },
-  { id: "seg-14", id_segmen: "K007002", kecamatan_id: "kec-7" },
-  { id: "seg-15", id_segmen: "K008001", kecamatan_id: "kec-8" },
-  { id: "seg-16", id_segmen: "K008002", kecamatan_id: "kec-8" },
-  { id: "seg-17", id_segmen: "K009001", kecamatan_id: "kec-9" },
-  { id: "seg-18", id_segmen: "K009002", kecamatan_id: "kec-9" },
-  { id: "seg-19", id_segmen: "K010001", kecamatan_id: "kec-10" },
-  { id: "seg-20", id_segmen: "K010002", kecamatan_id: "kec-10" },
-]
-
-const INITIAL_SUBSEGMEN: Subsegmen[] = [
-  { id: "sub-1", segmen_id: "seg-1", kode_subsegmen: "A1" },
-  { id: "sub-2", segmen_id: "seg-1", kode_subsegmen: "A2" },
-  { id: "sub-3", segmen_id: "seg-2", kode_subsegmen: "B1" },
-  { id: "sub-4", segmen_id: "seg-2", kode_subsegmen: "B2" },
-  { id: "sub-5", segmen_id: "seg-3", kode_subsegmen: "C1" },
-  { id: "sub-6", segmen_id: "seg-3", kode_subsegmen: "C2" },
-  { id: "sub-7", segmen_id: "seg-4", kode_subsegmen: "D1" },
-  { id: "sub-8", segmen_id: "seg-4", kode_subsegmen: "D2" },
-  { id: "sub-9", segmen_id: "seg-5", kode_subsegmen: "E1" },
-  { id: "sub-10", segmen_id: "seg-5", kode_subsegmen: "E2" },
-  { id: "sub-11", segmen_id: "seg-6", kode_subsegmen: "F1" },
-  { id: "sub-12", segmen_id: "seg-6", kode_subsegmen: "F2" },
-  { id: "sub-13", segmen_id: "seg-7", kode_subsegmen: "G1" },
-  { id: "sub-14", segmen_id: "seg-7", kode_subsegmen: "G2" },
-  { id: "sub-15", segmen_id: "seg-8", kode_subsegmen: "H1" },
-  { id: "sub-16", segmen_id: "seg-8", kode_subsegmen: "H2" },
-  { id: "sub-17", segmen_id: "seg-9", kode_subsegmen: "I1" },
-  { id: "sub-18", segmen_id: "seg-9", kode_subsegmen: "I2" },
-  { id: "sub-19", segmen_id: "seg-10", kode_subsegmen: "J1" },
-  { id: "sub-20", segmen_id: "seg-10", kode_subsegmen: "J2" },
-  { id: "sub-21", segmen_id: "seg-11", kode_subsegmen: "K1" },
-  { id: "sub-22", segmen_id: "seg-11", kode_subsegmen: "K2" },
-  { id: "sub-23", segmen_id: "seg-12", kode_subsegmen: "L1" },
-  { id: "sub-24", segmen_id: "seg-12", kode_subsegmen: "L2" },
-  { id: "sub-25", segmen_id: "seg-13", kode_subsegmen: "M1" },
-  { id: "sub-26", segmen_id: "seg-13", kode_subsegmen: "M2" },
-  { id: "sub-27", segmen_id: "seg-14", kode_subsegmen: "N1" },
-  { id: "sub-28", segmen_id: "seg-14", kode_subsegmen: "N2" },
-  { id: "sub-29", segmen_id: "seg-15", kode_subsegmen: "O1" },
-  { id: "sub-30", segmen_id: "seg-15", kode_subsegmen: "O2" },
-]
-
 function getKecamatanName(kecamatanId: string, kecamatan: Kecamatan[]) {
   return kecamatan.find((item) => item.id === kecamatanId)?.nama_kecamatan ?? "-"
 }
@@ -127,11 +61,16 @@ function getSegmenById(segmenId: string, segmen: Segmen[]) {
 }
 
 export default function ReferensiWilayah() {
+  const { id: actorId, name, email } = useAdminAuth()
+  const actorName = name || email || "Admin"
+
   const [activeTab, setActiveTab] = React.useState<TabKey>("Kecamatan")
 
-  const [kecamatanData, setKecamatanData] = React.useState<Kecamatan[]>(INITIAL_KECAMATAN)
-  const [segmenData, setSegmenData] = React.useState<Segmen[]>(INITIAL_SEGMEN)
-  const [subsegmenData, setSubsegmenData] = React.useState<Subsegmen[]>(INITIAL_SUBSEGMEN)
+  const [kecamatanData, setKecamatanData] = React.useState<Kecamatan[]>([])
+  const [segmenData, setSegmenData] = React.useState<Segmen[]>([])
+  const [subsegmenData, setSubsegmenData] = React.useState<Subsegmen[]>([])
+  const [isLoading, setIsLoading] = React.useState(false)
+  const [loadError, setLoadError] = React.useState("")
 
   const [kecamatanModalOpen, setKecamatanModalOpen] = React.useState(false)
   const [editingKecamatanId, setEditingKecamatanId] = React.useState<string | null>(null)
@@ -163,6 +102,48 @@ export default function ReferensiWilayah() {
     | null
   >(null)
   const [deleteWarningText, setDeleteWarningText] = React.useState("")
+
+  const fetchAllData = React.useCallback(async () => {
+    setIsLoading(true)
+    setLoadError("")
+
+    const [{ data: kec, error: kecError }, { data: seg, error: segError }, { data: sub, error: subError }] =
+      await Promise.all([
+        supabase.from("kecamatan").select("id, kode_kecamatan, nama_kecamatan").order("kode_kecamatan"),
+        supabase.from("segmen").select("id, id_segmen, kecamatan_id").order("id_segmen"),
+        supabase.from("subsegmen").select("id, segmen_id, kode_subsegmen").order("kode_subsegmen"),
+      ])
+
+    if (kecError || segError || subError) {
+      setLoadError(
+        kecError?.message || segError?.message || subError?.message || "Gagal memuat data referensi wilayah."
+      )
+      setIsLoading(false)
+      return
+    }
+
+    setKecamatanData(kec ?? [])
+    setSegmenData(seg ?? [])
+    setSubsegmenData(sub ?? [])
+    setIsLoading(false)
+  }, [])
+
+  React.useEffect(() => {
+    fetchAllData()
+  }, [fetchAllData])
+
+  React.useEffect(() => {
+    const channel = supabase
+      .channel("referensi-wilayah-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "kecamatan" }, () => fetchAllData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "segmen" }, () => fetchAllData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "subsegmen" }, () => fetchAllData())
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [fetchAllData])
 
   const filteredSegmen = React.useMemo(() => {
     if (!segmenFilterKecamatan) {
@@ -209,7 +190,7 @@ export default function ReferensiWilayah() {
     setKecamatanModalOpen(true)
   }
 
-  const handleSaveKecamatan = () => {
+  const handleSaveKecamatan = async () => {
     if (!kecamatanKode.trim() || !kecamatanNama.trim()) {
       setKecamatanError("Kode dan nama kecamatan harus diisi.")
       return
@@ -225,26 +206,48 @@ export default function ReferensiWilayah() {
       return
     }
 
+    setKecamatanError("")
+
     if (editingKecamatanId) {
-      setKecamatanData((prev) =>
-        prev.map((item) =>
-          item.id === editingKecamatanId
-            ? { ...item, kode_kecamatan: kecamatanKode.trim(), nama_kecamatan: kecamatanNama.trim() }
-            : item,
-        ),
-      )
+      const { error } = await supabase
+        .from("kecamatan")
+        .update({ kode_kecamatan: kecamatanKode.trim(), nama_kecamatan: kecamatanNama.trim() })
+        .eq("id", editingKecamatanId)
+
+      if (error) {
+        setKecamatanError(error.message || "Gagal menyimpan perubahan.")
+        return
+      }
+
+      await logActivity({
+        actorId,
+        actorName,
+        actionType: "update_data",
+        description: `Memperbarui kecamatan ${kecamatanKode.trim()} - ${kecamatanNama.trim()}`,
+        module: "referensi_wilayah",
+      })
     } else {
-      setKecamatanData((prev) => [
-        ...prev,
-        {
-          id: `kec-${Date.now()}`,
-          kode_kecamatan: kecamatanKode.trim(),
-          nama_kecamatan: kecamatanNama.trim(),
-        },
-      ])
+      const { error } = await supabase.from("kecamatan").insert({
+        kode_kecamatan: kecamatanKode.trim(),
+        nama_kecamatan: kecamatanNama.trim(),
+      })
+
+      if (error) {
+        setKecamatanError(error.message || "Gagal menambahkan kecamatan.")
+        return
+      }
+
+      await logActivity({
+        actorId,
+        actorName,
+        actionType: "add_reference",
+        description: `Menambahkan kecamatan baru ${kecamatanKode.trim()} - ${kecamatanNama.trim()}`,
+        module: "referensi_wilayah",
+      })
     }
 
     setKecamatanModalOpen(false)
+    fetchAllData()
   }
 
   const openAddSegmen = () => {
@@ -265,15 +268,15 @@ export default function ReferensiWilayah() {
     setSegmenModalOpen(true)
   }
 
-  const handleSaveSegmen = () => {
+  const handleSaveSegmen = async () => {
     if (!segmenKecamatanId || !segmenIdSegmen.trim()) {
       setSegmenError("Pilih kecamatan dan masukkan id segmen.")
       return
     }
 
     const kecamatanCode = getKecamatanCode(segmenKecamatanId, kecamatanData)
-    if (!kecamatanCode || segmenIdSegmen.trim().slice(0, 7) !== kecamatanCode) {
-      setSegmenError("7 digit pertama id segmen harus sama dengan kode kecamatan yang dipilih.")
+    if (!kecamatanCode || segmenIdSegmen.trim().slice(0, kecamatanCode.length) !== kecamatanCode) {
+      setSegmenError("Awalan id segmen harus sama dengan kode kecamatan yang dipilih.")
       return
     }
 
@@ -287,26 +290,48 @@ export default function ReferensiWilayah() {
       return
     }
 
+    setSegmenError("")
+
     if (editingSegmenId) {
-      setSegmenData((prev) =>
-        prev.map((item) =>
-          item.id === editingSegmenId
-            ? { ...item, id_segmen: segmenIdSegmen.trim(), kecamatan_id: segmenKecamatanId }
-            : item,
-        ),
-      )
+      const { error } = await supabase
+        .from("segmen")
+        .update({ id_segmen: segmenIdSegmen.trim(), kecamatan_id: segmenKecamatanId })
+        .eq("id", editingSegmenId)
+
+      if (error) {
+        setSegmenError(error.message || "Gagal menyimpan perubahan.")
+        return
+      }
+
+      await logActivity({
+        actorId,
+        actorName,
+        actionType: "update_data",
+        description: `Memperbarui segmen ${segmenIdSegmen.trim()}`,
+        module: "referensi_wilayah",
+      })
     } else {
-      setSegmenData((prev) => [
-        ...prev,
-        {
-          id: `seg-${Date.now()}`,
-          id_segmen: segmenIdSegmen.trim(),
-          kecamatan_id: segmenKecamatanId,
-        },
-      ])
+      const { error } = await supabase.from("segmen").insert({
+        id_segmen: segmenIdSegmen.trim(),
+        kecamatan_id: segmenKecamatanId,
+      })
+
+      if (error) {
+        setSegmenError(error.message || "Gagal menambahkan segmen.")
+        return
+      }
+
+      await logActivity({
+        actorId,
+        actorName,
+        actionType: "add_reference",
+        description: `Menambahkan segmen baru ${segmenIdSegmen.trim()}`,
+        module: "referensi_wilayah",
+      })
     }
 
     setSegmenModalOpen(false)
+    fetchAllData()
   }
 
   const openAddSubsegmen = () => {
@@ -330,7 +355,7 @@ export default function ReferensiWilayah() {
     setSubsegmenModalOpen(true)
   }
 
-  const handleSaveSubsegmen = () => {
+  const handleSaveSubsegmen = async () => {
     if (!subsegmenKecamatanId || !subsegmenSegmenId || !subsegmenKode.trim()) {
       setSubsegmenError("Lengkapi kecamatan, segmen, dan kode subsegmen.")
       return
@@ -353,30 +378,48 @@ export default function ReferensiWilayah() {
       return
     }
 
+    setSubsegmenError("")
+
     if (editingSubsegmenId) {
-      setSubsegmenData((prev) =>
-        prev.map((item) =>
-          item.id === editingSubsegmenId
-            ? {
-                ...item,
-                segmen_id: subsegmenSegmenId,
-                kode_subsegmen: subsegmenKode.trim(),
-              }
-            : item,
-        ),
-      )
+      const { error } = await supabase
+        .from("subsegmen")
+        .update({ segmen_id: subsegmenSegmenId, kode_subsegmen: subsegmenKode.trim() })
+        .eq("id", editingSubsegmenId)
+
+      if (error) {
+        setSubsegmenError(error.message || "Gagal menyimpan perubahan.")
+        return
+      }
+
+      await logActivity({
+        actorId,
+        actorName,
+        actionType: "update_data",
+        description: `Memperbarui subsegmen ${subsegmenKode.trim()}`,
+        module: "referensi_wilayah",
+      })
     } else {
-      setSubsegmenData((prev) => [
-        ...prev,
-        {
-          id: `sub-${Date.now()}`,
-          segmen_id: subsegmenSegmenId,
-          kode_subsegmen: subsegmenKode.trim(),
-        },
-      ])
+      const { error } = await supabase.from("subsegmen").insert({
+        segmen_id: subsegmenSegmenId,
+        kode_subsegmen: subsegmenKode.trim(),
+      })
+
+      if (error) {
+        setSubsegmenError(error.message || "Gagal menambahkan subsegmen.")
+        return
+      }
+
+      await logActivity({
+        actorId,
+        actorName,
+        actionType: "add_reference",
+        description: `Menambahkan subsegmen baru ${subsegmenKode.trim()}`,
+        module: "referensi_wilayah",
+      })
     }
 
     setSubsegmenModalOpen(false)
+    fetchAllData()
   }
 
   const openDeleteModal = (
@@ -399,31 +442,69 @@ export default function ReferensiWilayah() {
     setDeleteModalOpen(true)
   }
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deleteTarget) return
 
     if (deleteTarget.type === "kecamatan") {
-      const segmenToRemove = segmenData.filter((item) => item.kecamatan_id === deleteTarget.id)
-      const segmenIds = segmenToRemove.map((item) => item.id)
-      setKecamatanData((prev) => prev.filter((item) => item.id !== deleteTarget.id))
-      setSegmenData((prev) => prev.filter((item) => item.kecamatan_id !== deleteTarget.id))
-      setSubsegmenData((prev) => prev.filter((item) => !segmenIds.includes(item.segmen_id)))
+      const target = kecamatanData.find((item) => item.id === deleteTarget.id)
+      const { error } = await supabase.from("kecamatan").delete().eq("id", deleteTarget.id)
+      if (error) {
+        setDeleteWarningText(error.message || "Gagal menghapus kecamatan.")
+        return
+      }
+      await logActivity({
+        actorId,
+        actorName,
+        actionType: "delete_data",
+        description: `Menghapus kecamatan ${target?.kode_kecamatan ?? ""} - ${target?.nama_kecamatan ?? ""}`,
+        module: "referensi_wilayah",
+      })
     }
 
     if (deleteTarget.type === "segmen") {
-      setSegmenData((prev) => prev.filter((item) => item.id !== deleteTarget.id))
-      setSubsegmenData((prev) => prev.filter((item) => item.segmen_id !== deleteTarget.id))
+      const target = segmenData.find((item) => item.id === deleteTarget.id)
+      const { error } = await supabase.from("segmen").delete().eq("id", deleteTarget.id)
+      if (error) {
+        setDeleteWarningText(error.message || "Gagal menghapus segmen.")
+        return
+      }
+      await logActivity({
+        actorId,
+        actorName,
+        actionType: "delete_data",
+        description: `Menghapus segmen ${target?.id_segmen ?? ""}`,
+        module: "referensi_wilayah",
+      })
     }
 
     if (deleteTarget.type === "subsegmen") {
-      setSubsegmenData((prev) => prev.filter((item) => item.id !== deleteTarget.id))
+      const target = subsegmenData.find((item) => item.id === deleteTarget.id)
+      const { error } = await supabase.from("subsegmen").delete().eq("id", deleteTarget.id)
+      if (error) {
+        setDeleteWarningText(error.message || "Gagal menghapus subsegmen.")
+        return
+      }
+      await logActivity({
+        actorId,
+        actorName,
+        actionType: "delete_data",
+        description: `Menghapus subsegmen ${target?.kode_subsegmen ?? ""}`,
+        module: "referensi_wilayah",
+      })
     }
 
     setDeleteModalOpen(false)
+    fetchAllData()
   }
 
   return (
     <div className="space-y-6">
+      {loadError ? (
+        <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/30 dark:bg-rose-950/40 dark:text-rose-200">
+          {loadError}
+        </p>
+      ) : null}
+
       <div className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
           {TABS.map((tab) => {

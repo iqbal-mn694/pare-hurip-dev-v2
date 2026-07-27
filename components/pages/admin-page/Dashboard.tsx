@@ -5,41 +5,45 @@ import {
   Database,
   Layers,
   MapPin,
-  ArrowUpRight,
   Upload,
   Settings,
+  Cpu,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { supabase } from "@/lib/supabase/client"
 
-const summaryItems = [
-  { title: "Total segmen", value: "312", icon: Database },
-  { title: "Observasi bulan berjalan", value: "248/312", icon: Upload },
-  { title: "Kecamatan lengkap", value: "7/10", icon: Layers },
-  { title: "Versi model aktif", value: "v1.4.2", icon: Settings },
-]
+interface KecamatanRef {
+  id: string
+  kode_kecamatan: string
+  nama_kecamatan: string
+}
 
-const kecamatanProgress = [
-  { name: "Cibeureum", percent: 96 },
-  { name: "Mangkubumi", percent: 88 },
-  { name: "Lengkongsari", percent: 82 },
-  { name: "Cihideung", percent: 74 },
-  { name: "Cipedes", percent: 61 },
-  { name: "Cipari", percent: 58 },
-  { name: "Campaka", percent: 45 },
-  { name: "Cipatujah", percent: 33 },
-  { name: "Tawang", percent: 28 },
-  { name: "Purbaratu", percent: 19 },
-]
+interface SegmenRef {
+  id: string
+  id_segmen: string
+  kecamatan_id: string
+}
 
-const activityLogs = [
-  { icon: Upload, text: "Mengunggah data KSA segmentasi baru", actor: "Aini", time: "2 jam lalu" },
-  { icon: Database, text: "Memperbarui data luas panen Kecamatan Cibeureum", actor: "Adnan", time: "4 jam lalu" },
-  { icon: MapPin, text: "Menambahkan referensi wilayah baru", actor: "Dewi", time: "Kemarin" },
-  { icon: Layers, text: "Memeriksa validitas model prediksi", actor: "Rizal", time: "Kemarin" },
-  { icon: ArrowUpRight, text: "Menjalankan pelatihan model prediksi", actor: "Nanda", time: "2 hari lalu" },
-]
+interface KsaRow {
+  id_segmen: string
+  periode: string
+}
+
+interface ActivityLogRow {
+  id: string
+  actor_id: string | null
+  actor_name: string | null
+  action_type: string | null
+  module: string | null
+  description: string | null
+  created_at: string | null
+}
+
+function getCurrentPeriode() {
+  return new Date().toISOString().slice(0, 7) // format YYYY-MM, sesuai <input type="month">
+}
 
 function getProgressColor(percent: number) {
   if (percent >= 80) return "bg-emerald-500"
@@ -47,7 +51,160 @@ function getProgressColor(percent: number) {
   return "bg-destructive"
 }
 
+function getActivityIcon(module: string | null) {
+  switch (module) {
+    case "import_data":
+      return Upload
+    case "kelola_data":
+      return Database
+    case "referensi_wilayah":
+      return MapPin
+    case "model_prediksi":
+      return Cpu
+    default:
+      return Database
+  }
+}
+
+function formatRelativeTime(value: string | null) {
+  if (!value) return "-"
+  const date = new Date(value)
+  const diffMs = Date.now() - date.getTime()
+  const diffMin = Math.floor(diffMs / 60000)
+
+  if (diffMin < 1) return "Baru saja"
+  if (diffMin < 60) return `${diffMin} menit lalu`
+
+  const diffHour = Math.floor(diffMin / 60)
+  if (diffHour < 24) return `${diffHour} jam lalu`
+
+  const diffDay = Math.floor(diffHour / 24)
+  if (diffDay === 1) return "Kemarin"
+  if (diffDay < 7) return `${diffDay} hari lalu`
+
+  return date.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
+}
+
 export default function Dashboard() {
+  const [kecamatanList, setKecamatanList] = React.useState<KecamatanRef[]>([])
+  const [segmenList, setSegmenList] = React.useState<SegmenRef[]>([])
+  const [ksaRows, setKsaRows] = React.useState<KsaRow[]>([])
+  const [modelVersion, setModelVersion] = React.useState("v1.4.2")
+  const [activityLogs, setActivityLogs] = React.useState<ActivityLogRow[]>([])
+
+  const currentPeriode = React.useMemo(() => getCurrentPeriode(), [])
+
+  const fetchSummaryData = React.useCallback(async () => {
+    const [{ data: kec }, { data: seg }, { data: ksa }] = await Promise.all([
+      supabase.from("kecamatan").select("id, kode_kecamatan, nama_kecamatan"),
+      supabase.from("segmen").select("id, id_segmen, kecamatan_id"),
+      supabase
+        .from("ksa_segments")
+        .select("id_segmen, periode")
+        .eq("periode", currentPeriode),
+    ])
+
+    setKecamatanList(kec ?? [])
+    setSegmenList(seg ?? [])
+    setKsaRows(ksa ?? [])
+
+    try {
+      const { data: model } = await supabase
+        .from("model_versions")
+        .select("version")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (model?.version) setModelVersion(model.version)
+    } catch {
+      
+    }
+  }, [currentPeriode])
+
+  const fetchActivityLogs = React.useCallback(async () => {
+    const { data } = await supabase
+      .from("activity_log")
+      .select("id, actor_id, actor_name, action_type, module, description, created_at")
+      .order("created_at", { ascending: false })
+      .limit(5)
+
+    setActivityLogs(data ?? [])
+  }, [])
+
+  React.useEffect(() => {
+    fetchSummaryData()
+    fetchActivityLogs()
+  }, [fetchSummaryData, fetchActivityLogs])
+
+  React.useEffect(() => {
+    const channel = supabase
+      .channel("dashboard-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "ksa_segments" },
+        () => {
+          fetchSummaryData()
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "activity_log" },
+        () => {
+          fetchActivityLogs()
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "segmen" },
+        () => {
+          fetchSummaryData()
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "kecamatan" },
+        () => {
+          fetchSummaryData()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [fetchSummaryData, fetchActivityLogs])
+
+  const totalSegmen = segmenList.length
+
+  const observedSegmenSet = React.useMemo(
+    () => new Set(ksaRows.map((row) => row.id_segmen)),
+    [ksaRows]
+  )
+  const observasiCount = observedSegmenSet.size
+
+  const kecamatanProgress = React.useMemo(() => {
+    return kecamatanList
+      .map((kec) => {
+        const segmenInKec = segmenList.filter((seg) => seg.kecamatan_id === kec.id)
+        const totalInKec = segmenInKec.length
+        const observedInKec = segmenInKec.filter((seg) =>
+          observedSegmenSet.has(seg.id_segmen)
+        ).length
+        const percent = totalInKec > 0 ? Math.round((observedInKec / totalInKec) * 100) : 0
+        return { name: kec.nama_kecamatan, percent }
+      })
+      .sort((a, b) => b.percent - a.percent)
+  }, [kecamatanList, segmenList, observedSegmenSet])
+
+  const kecamatanLengkapCount = kecamatanProgress.filter((item) => item.percent === 100).length
+
+  const summaryItems = [
+    { title: "Total segmen", value: String(totalSegmen), icon: Database },
+    { title: "Observasi bulan berjalan", value: `${observasiCount}/${totalSegmen}`, icon: Upload },
+    { title: "Kecamatan lengkap", value: `${kecamatanLengkapCount}/${kecamatanList.length}`, icon: Layers },
+    { title: "Versi model aktif", value: modelVersion, icon: Settings },
+  ]
+
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -106,17 +263,19 @@ export default function Dashboard() {
             <CardTitle className="mb-0">Log Aktivitas Terbaru</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 px-5 pb-5 pt-0">
-            {activityLogs.map((item, index) => {
-              const Icon = item.icon
+            {activityLogs.map((item) => {
+              const Icon = getActivityIcon(item.module)
               return (
-                <div key={index} className="flex items-start gap-3 rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
+                <div key={item.id} className="flex items-start gap-3 rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
                   <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-200">
                     <Icon className="size-5" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{item.text}</p>
+                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                      {item.description ?? "-"}
+                    </p>
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                      {item.actor} · {item.time}
+                      {item.actor_name ?? "Admin"} · {formatRelativeTime(item.created_at)}
                     </p>
                   </div>
                 </div>

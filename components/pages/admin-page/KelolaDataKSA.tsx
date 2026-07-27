@@ -30,125 +30,48 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { cn } from "@/lib/utils"
+import { supabase } from "@/lib/supabase/client"
+import { logActivity } from "@/lib/supabase/activity-log"
+import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext"
 
-const KECAMATAN = [
-  { id: "kec-1", kode_kecamatan: "K001", nama_kecamatan: "Cibeureum" },
-  { id: "kec-2", kode_kecamatan: "K002", nama_kecamatan: "Mangkubumi" },
-  { id: "kec-3", kode_kecamatan: "K003", nama_kecamatan: "Lengkongsari" },
-  { id: "kec-4", kode_kecamatan: "K004", nama_kecamatan: "Cihideung" },
-  { id: "kec-5", kode_kecamatan: "K005", nama_kecamatan: "Cipedes" },
-  { id: "kec-6", kode_kecamatan: "K006", nama_kecamatan: "Cipari" },
-  { id: "kec-7", kode_kecamatan: "K007", nama_kecamatan: "Campaka" },
-  { id: "kec-8", kode_kecamatan: "K008", nama_kecamatan: "Cipatujah" },
-  { id: "kec-9", kode_kecamatan: "K009", nama_kecamatan: "Tawang" },
-  { id: "kec-10", kode_kecamatan: "K010", nama_kecamatan: "Purbaratu" },
+const FASE_OPTIONS = [
+  { value: "1", label: "1 - Vegetatif Awal" },
+  { value: "2", label: "2 - Vegetatif Akhir" },
+  { value: "3", label: "3 - Generatif" },
+  { value: "4", label: "4 - Panen" },
+  { value: "5", label: "5 - Persiapan Lahan" },
+  { value: "6", label: "6 - Puso" },
+  { value: "7", label: "7 - Sawah Bukan Padi" },
+  { value: "8", label: "8 - Bukan Sawah" },
 ]
 
-const SEGMEN = [
-  { id: "seg-1", id_segmen: "SGM001", kecamatan_id: "kec-1" },
-  { id: "seg-2", id_segmen: "SGM002", kecamatan_id: "kec-1" },
-  { id: "seg-3", id_segmen: "SGM003", kecamatan_id: "kec-2" },
-  { id: "seg-4", id_segmen: "SGM004", kecamatan_id: "kec-2" },
-  { id: "seg-5", id_segmen: "SGM005", kecamatan_id: "kec-3" },
-  { id: "seg-6", id_segmen: "SGM006", kecamatan_id: "kec-3" },
-  { id: "seg-7", id_segmen: "SGM007", kecamatan_id: "kec-4" },
-  { id: "seg-8", id_segmen: "SGM008", kecamatan_id: "kec-4" },
-  { id: "seg-9", id_segmen: "SGM009", kecamatan_id: "kec-5" },
-  { id: "seg-10", id_segmen: "SGM010", kecamatan_id: "kec-5" },
-  { id: "seg-11", id_segmen: "SGM011", kecamatan_id: "kec-6" },
-  { id: "seg-12", id_segmen: "SGM012", kecamatan_id: "kec-7" },
-  { id: "seg-13", id_segmen: "SGM013", kecamatan_id: "kec-8" },
-  { id: "seg-14", id_segmen: "SGM014", kecamatan_id: "kec-9" },
-  { id: "seg-15", id_segmen: "SGM015", kecamatan_id: "kec-10" },
-]
+const DEFAULT_FASE_CODE = FASE_OPTIONS[0].value
 
-const SUBSEGMEN = [
-  { id: "sub-1", segmen_id: "seg-1", kode_subsegmen: "A1" },
-  { id: "sub-2", segmen_id: "seg-1", kode_subsegmen: "A2" },
-  { id: "sub-3", segmen_id: "seg-2", kode_subsegmen: "B1" },
-  { id: "sub-4", segmen_id: "seg-2", kode_subsegmen: "B2" },
-  { id: "sub-5", segmen_id: "seg-3", kode_subsegmen: "C1" },
-  { id: "sub-6", segmen_id: "seg-3", kode_subsegmen: "C2" },
-  { id: "sub-7", segmen_id: "seg-4", kode_subsegmen: "D1" },
-  { id: "sub-8", segmen_id: "seg-4", kode_subsegmen: "D2" },
-  { id: "sub-9", segmen_id: "seg-5", kode_subsegmen: "E1" },
-  { id: "sub-10", segmen_id: "seg-5", kode_subsegmen: "E2" },
-  { id: "sub-11", segmen_id: "seg-6", kode_subsegmen: "F1" },
-  { id: "sub-12", segmen_id: "seg-6", kode_subsegmen: "F2" },
-  { id: "sub-13", segmen_id: "seg-7", kode_subsegmen: "G1" },
-  { id: "sub-14", segmen_id: "seg-7", kode_subsegmen: "G2" },
-  { id: "sub-15", segmen_id: "seg-8", kode_subsegmen: "H1" },
-  { id: "sub-16", segmen_id: "seg-8", kode_subsegmen: "H2" },
-  { id: "sub-17", segmen_id: "seg-9", kode_subsegmen: "I1" },
-  { id: "sub-18", segmen_id: "seg-9", kode_subsegmen: "I2" },
-  { id: "sub-19", segmen_id: "seg-10", kode_subsegmen: "J1" },
-  { id: "sub-20", segmen_id: "seg-10", kode_subsegmen: "J2" },
-  { id: "sub-21", segmen_id: "seg-11", kode_subsegmen: "K1" },
-  { id: "sub-22", segmen_id: "seg-12", kode_subsegmen: "L1" },
-  { id: "sub-23", segmen_id: "seg-13", kode_subsegmen: "M1" },
-  { id: "sub-24", segmen_id: "seg-14", kode_subsegmen: "N1" },
-  { id: "sub-25", segmen_id: "seg-15", kode_subsegmen: "O1" },
-  { id: "sub-26", segmen_id: "seg-11", kode_subsegmen: "K2" },
-  { id: "sub-27", segmen_id: "seg-12", kode_subsegmen: "L2" },
-  { id: "sub-28", segmen_id: "seg-13", kode_subsegmen: "M2" },
-  { id: "sub-29", segmen_id: "seg-14", kode_subsegmen: "N2" },
-  { id: "sub-30", segmen_id: "seg-15", kode_subsegmen: "O2" },
-]
-
-const VALID_PHASES = [
-  "Persiapan Lahan",
-  "Vegetatif 1",
-  "Vegetatif 2",
-  "Generatif 1",
-  "Generatif 2",
-  "Generatif 3",
-  "Panen",
-  "Bera",
-]
-
-const INITIAL_OBSERVASI = [
-  { id: "obs-1", subsegmen_id: "sub-1", periode: "2024-01", fase_tanam: "Persiapan Lahan" },
-  { id: "obs-2", subsegmen_id: "sub-2", periode: "2024-01", fase_tanam: "Vegetatif 1" },
-  { id: "obs-3", subsegmen_id: "sub-3", periode: "2024-01", fase_tanam: "7.1" },
-  { id: "obs-4", subsegmen_id: "sub-4", periode: "2024-02", fase_tanam: "Vegetatif 2" },
-  { id: "obs-5", subsegmen_id: "sub-5", periode: "2024-02", fase_tanam: "Generatif 1" },
-  { id: "obs-6", subsegmen_id: "sub-6", periode: "2024-03", fase_tanam: "4.5" },
-  { id: "obs-7", subsegmen_id: "sub-7", periode: "2024-03", fase_tanam: "Generatif 2" },
-  { id: "obs-8", subsegmen_id: "sub-8", periode: "2024-04", fase_tanam: "Generatif 3" },
-  { id: "obs-9", subsegmen_id: "sub-9", periode: "2024-04", fase_tanam: "Panen" },
-  { id: "obs-10", subsegmen_id: "sub-10", periode: "2024-05", fase_tanam: "Bera" },
-  { id: "obs-11", subsegmen_id: "sub-11", periode: "2024-05", fase_tanam: "Persiapan Lahan" },
-  { id: "obs-12", subsegmen_id: "sub-12", periode: "2024-06", fase_tanam: "Vegetatif 1" },
-  { id: "obs-13", subsegmen_id: "sub-13", periode: "2024-06", fase_tanam: "7.3" },
-  { id: "obs-14", subsegmen_id: "sub-14", periode: "2024-07", fase_tanam: "Vegetatif 2" },
-  { id: "obs-15", subsegmen_id: "sub-15", periode: "2024-07", fase_tanam: "Generatif 1" },
-  { id: "obs-16", subsegmen_id: "sub-16", periode: "2024-08", fase_tanam: "Generatif 2" },
-  { id: "obs-17", subsegmen_id: "sub-17", periode: "2024-08", fase_tanam: "Generatif 3" },
-  { id: "obs-18", subsegmen_id: "sub-18", periode: "2024-09", fase_tanam: "Panen" },
-  { id: "obs-19", subsegmen_id: "sub-19", periode: "2024-09", fase_tanam: "Bera" },
-  { id: "obs-20", subsegmen_id: "sub-20", periode: "2024-10", fase_tanam: "Persiapan Lahan" },
-  { id: "obs-21", subsegmen_id: "sub-21", periode: "2024-10", fase_tanam: "Vegetatif 1" },
-  { id: "obs-22", subsegmen_id: "sub-22", periode: "2024-11", fase_tanam: "Vegetatif 2" },
-  { id: "obs-23", subsegmen_id: "sub-23", periode: "2024-11", fase_tanam: "Generatif 1" },
-  { id: "obs-24", subsegmen_id: "sub-24", periode: "2024-12", fase_tanam: "Generatif 2" },
-  { id: "obs-25", subsegmen_id: "sub-25", periode: "2024-12", fase_tanam: "Bera" },
-  { id: "obs-26", subsegmen_id: "sub-26", periode: "2025-01", fase_tanam: "Persiapan Lahan" },
-  { id: "obs-27", subsegmen_id: "sub-27", periode: "2025-01", fase_tanam: "Vegetatif 1" },
-  { id: "obs-28", subsegmen_id: "sub-28", periode: "2025-02", fase_tanam: "7.1" },
-  { id: "obs-29", subsegmen_id: "sub-29", periode: "2025-02", fase_tanam: "Generatif 3" },
-  { id: "obs-30", subsegmen_id: "sub-30", periode: "2025-03", fase_tanam: "Panen" },
-]
-
-const PERIODE_OPTIONS = Array.from(
-  new Set(INITIAL_OBSERVASI.map((item) => item.periode))
-).sort()
-
-interface ObservasiRow {
+interface KecamatanRef {
   id: string
-  subsegmen_id: string
+  kode_kecamatan: string
+  nama_kecamatan: string
+}
+
+interface SegmenRef {
+  id: string
+  id_segmen: string
+  kecamatan_id: string
+}
+
+interface SubsegmenRef {
+  id: string
+  segmen_id: string
+  kode_subsegmen: string
+}
+
+interface KsaSegmentRow {
+  id: string
+  id_segmen: string
+  subsegmen: string
   periode: string
   fase_tanam: string
+  created_at: string | null
 }
 
 interface TableRowData {
@@ -159,36 +82,51 @@ interface TableRowData {
   kode_kecamatan: string
   periode: string
   fase_tanam: string
+  created_at: string | null
   kecamatan_id: string
   segmen_id: string
 }
 
-function isValidPhase(fase: string) {
-  return VALID_PHASES.includes(fase)
+function isValidPhaseCode(fase: string) {
+  const num = Number(fase)
+  if (Number.isNaN(num)) return false
+  return num >= 1 && num < 9
 }
 
-function getLabel(value: string) {
-  return value
-}
-
-function buildTableRows(rows: ObservasiRow[]) {
+function buildTableRows(
+  rows: KsaSegmentRow[],
+  segmenList: SegmenRef[],
+  kecamatanList: KecamatanRef[]
+): TableRowData[] {
   return rows.map((item) => {
-    const sub = SUBSEGMEN.find((subsegmen) => subsegmen.id === item.subsegmen_id)
-    const seg = SEGMEN.find((segmen) => segmen.id === sub?.segmen_id)
-    const kec = KECAMATAN.find((kecamatan) => kecamatan.id === seg?.kecamatan_id)
+    const seg = segmenList.find((segmen) => segmen.id_segmen === item.id_segmen)
+    const kec = kecamatanList.find((kecamatan) => kecamatan.id === seg?.kecamatan_id)
 
     return {
       id: item.id,
-      id_segmen: seg?.id_segmen ?? "-",
-      kode_subsegmen: sub?.kode_subsegmen ?? "-",
+      id_segmen: item.id_segmen,
+      kode_subsegmen: item.subsegmen,
       nama_kecamatan: kec?.nama_kecamatan ?? "-",
       kode_kecamatan: kec?.kode_kecamatan ?? "-",
       periode: item.periode,
-      fase_tanam: item.fase_tanam,
-      kecamatan_id: seg?.kecamatan_id ?? "",
+      fase_tanam: String(item.fase_tanam ?? ""),
+      created_at: item.created_at,
+      kecamatan_id: kec?.id ?? "",
       segmen_id: seg?.id ?? "",
     }
   })
+}
+
+function formatWaktuImport(value: string | null) {
+  if (!value) return "-"
+  try {
+    return new Date(value).toLocaleString("id-ID", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    })
+  } catch {
+    return value
+  }
 }
 
 function Badge({ children }: { children: React.ReactNode }) {
@@ -200,7 +138,18 @@ function Badge({ children }: { children: React.ReactNode }) {
 }
 
 export default function KelolaDataKSA() {
-  const [observations, setObservations] = React.useState<ObservasiRow[]>(INITIAL_OBSERVASI)
+  const { id: actorId, name, email } = useAdminAuth()
+  const actorName = name || email || "Admin"
+
+  const [kecamatanList, setKecamatanList] = React.useState<KecamatanRef[]>([])
+  const [segmenList, setSegmenList] = React.useState<SegmenRef[]>([])
+  const [subsegmenList, setSubsegmenList] = React.useState<SubsegmenRef[]>([])
+
+  const [importRows, setImportRows] = React.useState<KsaSegmentRow[]>([])
+  const [isLoading, setIsLoading] = React.useState(false)
+  const [loadError, setLoadError] = React.useState("")
+  const [isLiveConnected, setIsLiveConnected] = React.useState(false)
+
   const [filterKecamatan, setFilterKecamatan] = React.useState("")
   const [filterSegmen, setFilterSegmen] = React.useState("")
   const [filterPeriode, setFilterPeriode] = React.useState("")
@@ -214,25 +163,111 @@ export default function KelolaDataKSA() {
   const [viewingRowId, setViewingRowId] = React.useState<string | null>(null)
 
   const [editPeriode, setEditPeriode] = React.useState("")
-  const [editFase, setEditFase] = React.useState(VALID_PHASES[0])
+  const [editFase, setEditFase] = React.useState(DEFAULT_FASE_CODE)
+  const [editError, setEditError] = React.useState("")
 
   const [addKecamatan, setAddKecamatan] = React.useState("")
   const [addSegmen, setAddSegmen] = React.useState("")
   const [addSubsegmen, setAddSubsegmen] = React.useState("")
   const [addPeriode, setAddPeriode] = React.useState("")
-  const [addFase, setAddFase] = React.useState(VALID_PHASES[0])
+  const [addFase, setAddFase] = React.useState(DEFAULT_FASE_CODE)
   const [addError, setAddError] = React.useState("")
 
   const [notification, setNotification] = React.useState<string>("")
 
-  const tableRows = React.useMemo(() => buildTableRows(observations), [observations])
+  const fetchReferenceData = React.useCallback(async () => {
+    const [{ data: kec }, { data: seg }, { data: sub }] = await Promise.all([
+      supabase.from("kecamatan").select("id, kode_kecamatan, nama_kecamatan").order("kode_kecamatan"),
+      supabase.from("segmen").select("id, id_segmen, kecamatan_id").order("id_segmen"),
+      supabase.from("subsegmen").select("id, segmen_id, kode_subsegmen").order("kode_subsegmen"),
+    ])
+
+    setKecamatanList(kec ?? [])
+    setSegmenList(seg ?? [])
+    setSubsegmenList(sub ?? [])
+  }, [])
+
+  const fetchImportedData = React.useCallback(async () => {
+    setIsLoading(true)
+    setLoadError("")
+
+    const { data, error } = await supabase
+      .from("ksa_segments")
+      .select("id, id_segmen, subsegmen, periode, fase_tanam, created_at")
+      .order("created_at", { ascending: false })
+      .limit(1000)
+
+    if (error) {
+      setLoadError(error.message || "Gagal memuat data observasi KSA.")
+      setIsLoading(false)
+      return
+    }
+
+    setImportRows(data ?? [])
+    setIsLoading(false)
+  }, [])
+
+  React.useEffect(() => {
+    fetchReferenceData()
+    fetchImportedData()
+  }, [fetchReferenceData, fetchImportedData])
+
+  React.useEffect(() => {
+    const channel = supabase
+      .channel("ksa_segments-kelola-data")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "ksa_segments" },
+        () => {
+          fetchImportedData()
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "kecamatan" },
+        () => {
+          fetchReferenceData()
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "segmen" },
+        () => {
+          fetchReferenceData()
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "subsegmen" },
+        () => {
+          fetchReferenceData()
+        }
+      )
+      .subscribe((status) => {
+        setIsLiveConnected(status === "SUBSCRIBED")
+      })
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [fetchImportedData, fetchReferenceData])
+
+  const tableRows = React.useMemo(
+    () => buildTableRows(importRows, segmenList, kecamatanList),
+    [importRows, segmenList, kecamatanList]
+  )
+
+  const periodeOptions = React.useMemo(
+    () => Array.from(new Set(tableRows.map((row) => row.periode))).sort(),
+    [tableRows]
+  )
 
   const segmenOptions = React.useMemo(
     () =>
       filterKecamatan
-        ? SEGMEN.filter((seg) => seg.kecamatan_id === filterKecamatan)
-        : SEGMEN,
-    [filterKecamatan]
+        ? segmenList.filter((seg) => seg.kecamatan_id === filterKecamatan)
+        : segmenList,
+    [filterKecamatan, segmenList]
   )
 
   const filteredRows = React.useMemo(() => {
@@ -269,7 +304,13 @@ export default function KelolaDataKSA() {
     if (!current) return
     setViewingRowId(rowId)
     setEditPeriode(current.periode)
-    setEditFase(current.fase_tanam)
+
+    setEditFase(
+      FASE_OPTIONS.some((opt) => opt.value === current.fase_tanam)
+        ? current.fase_tanam
+        : DEFAULT_FASE_CODE
+    )
+    setEditError("")
     setIsEditOpen(true)
   }
 
@@ -282,24 +323,57 @@ export default function KelolaDataKSA() {
     ? tableRows.find((row) => row.id === viewingRowId)
     : null
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!selectedEditRow) return
-    setObservations((prev) =>
-      prev.map((item) =>
-        item.id === selectedEditRow.id
-          ? { ...item, periode: editPeriode, fase_tanam: editFase }
-          : item
-      )
-    )
+    setEditError("")
+
+    const { error } = await supabase
+      .from("ksa_segments")
+      .update({ periode: editPeriode, fase_tanam: editFase })
+      .eq("id", selectedEditRow.id)
+
+    if (error) {
+      setEditError(error.message || "Gagal menyimpan perubahan.")
+      return
+    }
+
+    await logActivity({
+      actorId,
+      actorName,
+      actionType: "update_data",
+      description: `Memperbarui data KSA segmen ${selectedEditRow.id_segmen} - ${selectedEditRow.kode_subsegmen} periode ${editPeriode}`,
+      module: "kelola_data",
+    })
+
     setIsEditOpen(false)
     setNotification("Perubahan berhasil disimpan")
+    fetchImportedData()
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!viewingRowId) return
-    setObservations((prev) => prev.filter((item) => item.id !== viewingRowId))
+
+    const target = tableRows.find((row) => row.id === viewingRowId)
+
+    const { error } = await supabase.from("ksa_segments").delete().eq("id", viewingRowId)
+
+    if (error) {
+      setNotification(error.message || "Gagal menghapus data")
+      setIsDeleteOpen(false)
+      return
+    }
+
+    await logActivity({
+      actorId,
+      actorName,
+      actionType: "delete_data",
+      description: `Menghapus data KSA segmen ${target?.id_segmen ?? ""} - ${target?.kode_subsegmen ?? ""} periode ${target?.periode ?? ""}`,
+      module: "kelola_data",
+    })
+
     setIsDeleteOpen(false)
     setNotification("Data berhasil dihapus")
+    fetchImportedData()
   }
 
   const resetFilters = () => {
@@ -312,17 +386,17 @@ export default function KelolaDataKSA() {
   const availableAddSegmen = React.useMemo(
     () =>
       addKecamatan
-        ? SEGMEN.filter((seg) => seg.kecamatan_id === addKecamatan)
+        ? segmenList.filter((seg) => seg.kecamatan_id === addKecamatan)
         : [],
-    [addKecamatan]
+    [addKecamatan, segmenList]
   )
 
   const availableAddSubsegmen = React.useMemo(
     () =>
       addSegmen
-        ? SUBSEGMEN.filter((sub) => sub.segmen_id === addSegmen)
+        ? subsegmenList.filter((sub) => sub.segmen_id === addSegmen)
         : [],
-    [addSegmen]
+    [addSegmen, subsegmenList]
   )
 
   const handleOpenAdd = () => {
@@ -330,33 +404,63 @@ export default function KelolaDataKSA() {
     setAddSegmen("")
     setAddSubsegmen("")
     setAddPeriode("")
-    setAddFase(VALID_PHASES[0])
+    setAddFase(DEFAULT_FASE_CODE)
     setAddError("")
     setIsAddOpen(true)
   }
 
+  const addSegmenCode = React.useMemo(
+    () => segmenList.find((seg) => seg.id === addSegmen)?.id_segmen ?? "",
+    [addSegmen, segmenList]
+  )
+  const addSubsegmenCode = React.useMemo(
+    () => subsegmenList.find((sub) => sub.id === addSubsegmen)?.kode_subsegmen ?? "",
+    [addSubsegmen, subsegmenList]
+  )
+
   const addDuplicateError = React.useMemo(() => {
-    if (!addSubsegmen || !addPeriode) return ""
-    const exists = observations.some(
-      (item) => item.subsegmen_id === addSubsegmen && item.periode === addPeriode
+    if (!addSegmenCode || !addSubsegmenCode || !addPeriode) return ""
+    const exists = importRows.some(
+      (item) =>
+        item.id_segmen === addSegmenCode &&
+        item.subsegmen === addSubsegmenCode &&
+        item.periode === addPeriode
     )
     return exists ? "Data untuk subsegmen dan periode ini sudah ada" : ""
-  }, [addSubsegmen, addPeriode, observations])
+  }, [addSegmenCode, addSubsegmenCode, addPeriode, importRows])
 
-  const handleSaveAdd = () => {
-    if (!addKecamatan || !addSegmen || !addSubsegmen || !addPeriode || !addFase) return
+  const handleSaveAdd = async () => {
+    if (!addKecamatan || !addSegmenCode || !addSubsegmenCode || !addPeriode || !addFase) return
     if (addDuplicateError) {
       setAddError(addDuplicateError)
       return
     }
 
-    const nextId = `obs-${Date.now()}`
-    setObservations((prev) => [
-      ...prev,
-      { id: nextId, subsegmen_id: addSubsegmen, periode: addPeriode, fase_tanam: addFase },
-    ])
+    setAddError("")
+
+    const { error } = await supabase.from("ksa_segments").insert({
+      id_segmen: addSegmenCode,
+      subsegmen: addSubsegmenCode,
+      periode: addPeriode,
+      fase_tanam: addFase,
+    })
+
+    if (error) {
+      setAddError(error.message || "Gagal menambahkan data.")
+      return
+    }
+
+    await logActivity({
+      actorId,
+      actorName,
+      actionType: "add_reference",
+      description: `Menambahkan data KSA manual: segmen ${addSegmenCode} - ${addSubsegmenCode} periode ${addPeriode}`,
+      module: "kelola_data",
+    })
+
     setIsAddOpen(false)
     setNotification("Data baru berhasil ditambahkan")
+    fetchImportedData()
   }
 
   const selectedDeleteRow = viewingRowId
@@ -398,7 +502,7 @@ export default function KelolaDataKSA() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Semua Kecamatan</SelectItem>
-                    {KECAMATAN.map((item) => (
+                    {kecamatanList.map((item) => (
                       <SelectItem key={item.id} value={item.id}>
                         {item.nama_kecamatan}
                       </SelectItem>
@@ -438,7 +542,7 @@ export default function KelolaDataKSA() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Semua Periode</SelectItem>
-                    {PERIODE_OPTIONS.map((periode) => (
+                    {periodeOptions.map((periode) => (
                       <SelectItem key={periode} value={periode}>
                         {periode}
                       </SelectItem>
@@ -478,67 +582,107 @@ export default function KelolaDataKSA() {
 
       <Card className="rounded-xl border shadow-sm">
         <CardHeader className="flex flex-col gap-3 px-5 pt-5 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="mb-0">Daftar Observasi KSA</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="mb-0">Daftar Observasi KSA</CardTitle>
+            <span
+              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
+                isLiveConnected
+                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                  : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+              }`}
+            >
+              <span
+                className={`size-1.5 rounded-full ${
+                  isLiveConnected ? "bg-emerald-500 animate-pulse" : "bg-slate-400"
+                }`}
+              />
+              {isLiveConnected ? "Live" : "Menghubungkan..."}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <p className="hidden text-sm text-slate-600 dark:text-slate-400 sm:block">
+              Data hasil Import Data, diperbarui otomatis.
+            </p>
+            <Button variant="outline" size="sm" onClick={fetchImportedData} disabled={isLoading}>
+              {isLoading ? "Memuat..." : "Muat Ulang"}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="px-5 pb-5 pt-0">
-          {filteredRows.length === 0 ? (
+          {loadError ? (
+            <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/30 dark:bg-rose-950/40 dark:text-rose-200">
+              {loadError}
+            </p>
+          ) : filteredRows.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-8 py-14 text-center text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
               <AlertTriangle className="mx-auto mb-3 size-10" />
-              <p className="text-lg font-semibold">Tidak ada data ditemukan</p>
-              <p className="mt-2 text-sm">Ubah filter atau reset untuk melihat semua data.</p>
+              <p className="text-lg font-semibold">
+                {isLoading ? "Memuat data..." : "Tidak ada data ditemukan"}
+              </p>
+              <p className="mt-2 text-sm">
+                {isLoading
+                  ? "Mohon tunggu sebentar."
+                  : "Ubah filter, reset, atau lakukan Import Data untuk melihat data di sini."}
+              </p>
             </div>
           ) : (
             <>
-              <Table className="min-w-full">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Segmen</TableHead>
-                    <TableHead>Subsegmen</TableHead>
-                    <TableHead>Kecamatan</TableHead>
-                    <TableHead>Periode</TableHead>
-                    <TableHead>Fase Tanam</TableHead>
-                    <TableHead>Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pagedRows.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell>{row.id_segmen}</TableCell>
-                      <TableCell>{row.kode_subsegmen}</TableCell>
-                      <TableCell>{row.nama_kecamatan}</TableCell>
-                      <TableCell>{row.periode}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span>{row.fase_tanam}</span>
-                          {!isValidPhase(row.fase_tanam) ? <Badge>tidak valid</Badge> : null}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => openEdit(row.id)}
-                            className="border-slate-200 text-slate-600 hover:bg-slate-100"
-                            aria-label="Edit"
-                          >
-                            <Edit3 className="size-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => openDelete(row.id)}
-                            className="border-slate-200 text-slate-600 hover:bg-slate-100"
-                            aria-label="Hapus"
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+              <div className="overflow-x-auto">
+                <Table className="min-w-full">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-center">Segmen</TableHead>
+                      <TableHead className="text-center">Subsegmen</TableHead>
+                      <TableHead className="text-center">Kecamatan</TableHead>
+                      <TableHead className="text-center">Periode</TableHead>
+                      <TableHead className="text-center">Fase Tanam</TableHead>
+                      <TableHead className="text-center">Waktu Import</TableHead>
+                      <TableHead className="text-center">Aksi</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {pagedRows.map((row) => (
+                      <TableRow key={row.id}>
+                        <TableCell className="text-center">{row.id_segmen}</TableCell>
+                        <TableCell className="text-center">{row.kode_subsegmen}</TableCell>
+                        <TableCell className="text-center">{row.nama_kecamatan}</TableCell>
+                        <TableCell className="text-center">{row.periode}</TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex flex-wrap items-center justify-center gap-2">
+                            <span>{row.fase_tanam}</span>
+                            {!isValidPhaseCode(row.fase_tanam) ? <Badge>tidak valid</Badge> : null}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center text-sm text-slate-600 dark:text-slate-300">
+                          {formatWaktuImport(row.created_at)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => openEdit(row.id)}
+                              className="border-slate-200 text-slate-600 hover:bg-slate-100"
+                              aria-label="Edit"
+                            >
+                              <Edit3 className="size-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => openDelete(row.id)}
+                              className="border-slate-200 text-slate-600 hover:bg-slate-100"
+                              aria-label="Hapus"
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
               <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
@@ -623,18 +767,28 @@ export default function KelolaDataKSA() {
                   <Label>Fase Tanam</Label>
                   <Select value={editFase} onValueChange={(value) => setEditFase(value)}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Pilih fase" />
+                      <SelectValue placeholder="Pilih kode fase" />
                     </SelectTrigger>
                     <SelectContent>
-                      {VALID_PHASES.map((fase) => (
-                        <SelectItem key={fase} value={fase}>
-                          {fase}
+                      {FASE_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {selectedEditRow && !FASE_OPTIONS.some((opt) => opt.value === selectedEditRow.fase_tanam) ? (
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Kode asli data ini: {selectedEditRow.fase_tanam} (sub-kode). Simpan untuk mengganti ke kode utama di atas.
+                    </p>
+                  ) : null}
                 </div>
               </div>
+              {editError ? (
+                <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/30 dark:bg-rose-950/40 dark:text-rose-200">
+                  {editError}
+                </p>
+              ) : null}
             </div>
             <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 px-6 py-4 dark:border-slate-800">
               <Button variant="outline" onClick={() => setIsEditOpen(false)}>
@@ -677,7 +831,7 @@ export default function KelolaDataKSA() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">Pilih Kecamatan</SelectItem>
-                      {KECAMATAN.map((item) => (
+                      {kecamatanList.map((item) => (
                         <SelectItem key={item.id} value={item.id}>
                           {item.nama_kecamatan}
                         </SelectItem>
@@ -734,12 +888,12 @@ export default function KelolaDataKSA() {
                   <Label>Fase Tanam</Label>
                   <Select value={addFase} onValueChange={(value) => setAddFase(value)}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Pilih fase" />
+                      <SelectValue placeholder="Pilih kode fase" />
                     </SelectTrigger>
                     <SelectContent>
-                      {VALID_PHASES.map((fase) => (
-                        <SelectItem key={fase} value={fase}>
-                          {fase}
+                      {FASE_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
