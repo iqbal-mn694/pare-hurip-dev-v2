@@ -67,6 +67,12 @@ const LSTM_HISTORY = [
   { version: "v1.1", trainedAt: "2026-04-10", summary: "MAE H+7: Rp162k", status: "Nonaktif" },
 ]
 
+// TODO: ganti dengan hasil evaluasi model asli dari tim ML/backend
+const EVAL_SUMMARY = {
+  rf: { accuracy: 85.2, precision: 87, recall: 84, f1: 85 },
+  lstm: { mae: 145000, rmse: 210000, mape: 4.8, r2: 0.91 },
+}
+
 function formatCurrency(value: number) {
   return `Rp${value.toLocaleString("id-ID")}`
 }
@@ -141,6 +147,85 @@ export default function ModelPrediksi() {
 
   return (
     <div className="space-y-6">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+        <h2 className="mb-4 text-base font-semibold text-slate-900 dark:text-slate-100">
+          Ringkasan Evaluasi Model
+        </h2>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900">
+            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              Evaluasi Klasifikasi (Fase Tanam)
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+              Random Forest — memprediksi 8 kategori fase tanam
+            </p>
+            <div className="mt-4 grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  {EVAL_SUMMARY.rf.accuracy}%
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Accuracy</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  {EVAL_SUMMARY.rf.precision}%
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Precision</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  {EVAL_SUMMARY.rf.recall}%
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Recall</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  {EVAL_SUMMARY.rf.f1}%
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">F1-Score</p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900">
+            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              Evaluasi Regresi (Harga Beras)
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+              LSTM — memprediksi harga beras dalam Rupiah
+            </p>
+            <div className="mt-4 grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  {formatCurrency(EVAL_SUMMARY.lstm.mae)}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">MAE</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  {formatCurrency(EVAL_SUMMARY.lstm.rmse)}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">RMSE</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  {EVAL_SUMMARY.lstm.mape}%
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">MAPE</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  {EVAL_SUMMARY.lstm.r2.toFixed(2)}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">R² Score</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
+          Detail evaluasi per horizon dan confusion matrix tersedia di masing-masing section di bawah.
+        </p>
+      </div>
+
       <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
         <p className="text-sm text-slate-500 dark:text-slate-400">
           Akurasi menurun seiring horizon makin jauh — ini keterbatasan wajar model, bukan cacat, sesuai prinsip pelaporan yang jujur.
