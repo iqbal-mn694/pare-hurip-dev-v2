@@ -170,10 +170,9 @@ export function generateDummyHistory(seedKey: string, monthCount = 9): PhasePoin
 // 4. API client — service ml-pare-hurip (FastAPI, model Random Forest)
 // ---------------------------------------------------------------------------
 
-const ML_API_BASE_URL =
-  process.env.NEXT_PUBLIC_ML_API_URL ?? "http://127.0.0.1:8000";
+const ML_API_BATCH_PATH = "/api/v1/random-forest/predict/batch";
 
-interface RandomForestHorizonPrediction {
+interface RandomForestPredictionItem {
   horizon_months: number;
   target_year: number;
   target_month: number;
@@ -181,18 +180,18 @@ interface RandomForestHorizonPrediction {
   confidence: number;
 }
 
-interface RandomForestPredictionResponse {
+interface RandomForestBatchResult {
   segment_id?: string | null;
   subsegment: string;
   district_code: string;
   last_known_phase: string;
   last_known_year: number;
   last_known_month: number;
-  predictions: RandomForestHorizonPrediction[];
+  predictions: RandomForestPredictionItem[];
 }
 
 interface RandomForestBatchResponse {
-  results: RandomForestPredictionResponse[];
+  results: RandomForestBatchResult[];
 }
 
 interface PredictPhaseParams {
@@ -205,38 +204,15 @@ interface PredictPhaseParams {
   segmentId?: string;
 }
 
-async function requestPrediction(
-  params: PredictPhaseParams
-): Promise<RandomForestPredictionResponse> {
-  const res = await fetch(`${ML_API_BASE_URL}/random-forest/predict`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      segment_id: params.segmentId,
-      subsegment: params.subsegment,
-      current_phase: String(params.currentPhase),
-      previous_phase: String(params.previousPhase),
-      district_code: params.districtCode,
-      month: params.month,
-      year: params.year,
-    }),
-  });
-
-  if (!res.ok) {
-    throw new Error(`Gagal memuat prediksi (${res.status})`);
-  }
-  return res.json();
-}
-
 async function requestPredictionBatch(
   paramsList: PredictPhaseParams[]
 ): Promise<RandomForestBatchResponse> {
-  const res = await fetch(`${ML_API_BASE_URL}/random-forest/predict/batch`, {
+  const res = await fetch(ML_API_BATCH_PATH, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       items: paramsList.map((p) => ({
-        segment_id: p.segmentId,
+        segment_id: p.segmentId ?? null,
         subsegment: p.subsegment,
         current_phase: String(p.currentPhase),
         previous_phase: String(p.previousPhase),
@@ -284,21 +260,8 @@ export async function fetchPrediction(
     year: last.year,
   };
 
-  if (subsegment !== AGGREGATE_VALUE) {
-    const res = await requestPrediction({ ...baseParams, subsegment });
-    return res.predictions.map((p, i) => ({
-      monthLabel: `${MONTH_NAMES_SHORT[forwardMonths[i].month - 1]} '${String(
-        forwardMonths[i].year
-      ).slice(-2)}`,
-      month: p.target_month,
-      year: p.target_year,
-      phase: parseFloat(p.predicted_phase),
-      kind: "prediction" as const,
-      confidence: p.confidence,
-    }));
-  }
-
-  const subOptions = getSubsegmentOptions(districtCode);
+  const subOptions =
+    subsegment === AGGREGATE_VALUE ? getSubsegmentOptions(districtCode) : [subsegment];
   const batch = await requestPredictionBatch(
     subOptions.map((sub) => ({ ...baseParams, subsegment: sub }))
   );
@@ -307,7 +270,12 @@ export async function fetchPrediction(
   const combined: PhasePoint[] = [];
 
   for (let h = 0; h < horizonCount; h++) {
-    const perSubsegment = batch.results.map((r) => r.predictions[h]);
+    const perSubsegment = batch.results
+      .map((r) => r.predictions[h])
+      .filter((prediction): prediction is RandomForestPredictionItem => Boolean(prediction));
+
+    if (perSubsegment.length === 0) continue;
+
     const avgPhaseValue =
       perSubsegment.reduce((sum, p) => sum + parseFloat(p.predicted_phase), 0) /
       perSubsegment.length;
