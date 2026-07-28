@@ -257,6 +257,21 @@ export default function FaseTanamChart() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-8 rounded-full bg-foreground/70" />
+              Historis
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-0.5 w-8 border-t-2 border-dashed border-foreground/70" />
+              Prediksi 3 bulan
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full border border-border bg-background" />
+              Titik data
+            </span>
+          </div>
+
           {selectedKecamatan.length === 0 ? (
             <div className="flex flex-col items-center justify-center text-center py-16 text-muted-foreground gap-2">
               <Info className="h-6 w-6" />
@@ -361,7 +376,9 @@ export default function FaseTanamChart() {
                             stroke={color}
                             strokeWidth={isHidden ? 1 : 2.5}
                             strokeOpacity={isHidden ? 0.15 : 1}
-                            type="monotone"
+                            type="basis"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
                             dot={(props) => renderDot(props, color, isHidden)}
                             activeDot={{ r: 5 }}
                             isAnimationActive
@@ -375,7 +392,9 @@ export default function FaseTanamChart() {
                             strokeWidth={isHidden ? 1 : 2.5}
                             strokeOpacity={isHidden ? 0.15 : 1}
                             strokeDasharray="6 4"
-                            type="monotone"
+                            type="basis"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
                             dot={(props) => renderDot(props, color, isHidden, true)}
                             activeDot={{ r: 6 }}
                             isAnimationActive
@@ -428,6 +447,10 @@ export default function FaseTanamChart() {
                     </div>
                   );
                 })}
+              </div>
+
+              <div className="mt-4 rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
+                Skala fase mengikuti label model ML: Vegetatif 1, Vegetatif 2, Generatif 1, Generatif 2, Generatif 3, Panen, dan Persiapan Lahan. Garis solid menunjukkan 9 bulan historis, lalu garis putus-putus menunjukkan 3 bulan prediksi.
               </div>
 
               {isAnyLoading && (
@@ -494,7 +517,7 @@ function PhaseTooltip({ active, payload, label, totalBands }: any) {
   }
 
   return (
-    <div className="rounded-lg border bg-background shadow-md p-3 text-xs min-w-[180px]">
+    <div className="rounded-lg border bg-background shadow-md p-3 text-xs min-w-45">
       <p className="font-semibold mb-2">{label}</p>
       <div className="space-y-1.5">
         {items.map((meta, idx) => (
@@ -512,6 +535,9 @@ function PhaseTooltip({ active, payload, label, totalBands }: any) {
               </p>
               <p className="text-muted-foreground">
                 {meta.label}
+                <span className="ml-1 rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide">
+                  {meta.kind === "prediction" ? "Prediksi" : "Historis"}
+                </span>
                 {meta.kind === "prediction" && typeof meta.confidence === "number" && (
                   <span className="ml-1 rounded bg-primary/10 text-primary px-1 py-0.5">
                     {Math.round(meta.confidence * 100)}% yakin
