@@ -80,6 +80,7 @@ import {
   yAxisTicksNumeric,
   sortDataByKecamatan, // <-- Impor fungsi baru
 } from "@/lib/utils";
+import FaseTanamChart from "../FaseTanamChart";
 
 // --- Pastikan KEDUA KOMPONEN PETA diimpor secara dinamis dengan ssr: false ---
 const KecamatanMapDynamic = dynamic(() => import("@/components/KecamatanMap"), {
@@ -551,118 +552,14 @@ const AnalysisDashboard = () => {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <LineChartIcon className="w-5 h-5 mr-2" />
-                Visualisasi Tren Siklus Pertumbuhan Padi
+                Prediksi Fase Tanam per Kecamatan
               </CardTitle>
               <CardDescription>
-                Grafik ini menggambarkan tren historis fase tanam padi yang
-                paling dominan per kecamatan di Kota Tasikmalaya. Dengan
-                memvisualisasikan tren padi bulanan, Anda dapat mengamati siklus
-                tanam dan pola perubahan fase pertumbuhan padi dari waktu ke
-                waktu secara dinamis.
+                Bandingkan prediksi fase tanam antar kecamatan
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-600 mb-4 flex items-center">
-                <Info size={16} className="mr-2 text-blue-500" />
-                Gunakan menu dropdown untuk memilih satu atau lebih kecamatan,
-                lalu klik "Konfirmasi Pilihan" untuk memperbarui grafik.
-              </p>
-              <div className="mb-4">
-                <Label htmlFor="kecamatan-select">
-                  Pilih Kecamatan (Data Actual)
-                </Label>
-                <Select open={isSelectOpen} onOpenChange={setIsSelectOpen}>
-                  <SelectTrigger id="kecamatan-select">
-                    <SelectValue placeholder="Pilih kecamatan..." />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60 overflow-y-auto">
-                    <div className="flex justify-between p-2 border-b">
-                      <Button
-                        variant="link"
-                        className="p-0 h-auto text-xs"
-                        onClick={() => handleSelectAll(false)}
-                      >
-                        Pilih Semua
-                      </Button>
-                      <Button
-                        variant="link"
-                        className="p-0 h-auto text-xs text-destructive"
-                        onClick={() => handleUnselectAll(false)}
-                      >
-                        Hapus Pilihan
-                      </Button>
-                    </div>
-                    {allKecamatan.map((kecamatan) => (
-                      <div
-                        key={kecamatan}
-                        className="relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => handlePendingKecamatanSelect(kecamatan)}
-                      >
-                        <Checkbox
-                          id={`checkbox-${kecamatan}`}
-                          checked={pendingSelectedKecamatan.includes(kecamatan)}
-                          className="absolute left-2 top-1/2 -translate-y-1/2"
-                        />
-                        <Label
-                          htmlFor={`checkbox-${kecamatan}`}
-                          className="flex-1 cursor-pointer"
-                        >
-                          {kecamatan}
-                        </Label>
-                      </div>
-                    ))}
-                    <div className="p-2 border-t">
-                      <Button
-                        onClick={handleConfirmSelection}
-                        className="w-full"
-                      >
-                        Konfirmasi Pilihan
-                      </Button>
-                    </div>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="h-[400px] w-full relative">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={chartData}
-                    margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="name"
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                    />
-                    <YAxis
-                      type="number"
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                      domain={yAxisDomain as [number, number]}
-                      ticks={yAxisTicksNumeric}
-                      tickFormatter={(value) =>
-                        yValueToLabel[String(Math.round(value))] || ""
-                      }
-                      interval={0}
-                      width={100}
-                    />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Legend />
-                    {confirmedSelectedKecamatan.map((kecamatan, index) => (
-                      <Line
-                        key={kecamatan}
-                        type="monotone"
-                        dataKey={kecamatan}
-                        stroke={lineColors[index % lineColors.length]}
-                        strokeWidth={2}
-                        activeDot={{ r: 6 }}
-                        connectNulls
-                      />
-                    ))}
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
+              <FaseTanamChart />
             </CardContent>
           </Card>
 
@@ -795,7 +692,7 @@ const AnalysisDashboard = () => {
               </div>
             </CardContent>
           </Card>
-
+          {/* peta */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
