@@ -1,24 +1,22 @@
-import AnalysisDashboard from '@/components/pages/prediction-page/visual-page/AnalysisDashboard'
-import FaseTanamChart from '@/components/pages/prediction-page/FaseTanamChart'
-import React from 'react'
+import AboutKsa from "@/components/pages/landing-page/AboutKsa";
+import Algoritma from "@/components/pages/landing-page/Algoritma";
+import Benefits from "@/components/pages/landing-page/Benefits";
+import Hero from "@/components/pages/landing-page/Hero";
+import MetodeKsa from "@/components/pages/landing-page/MetodeKsa";
+import SiklusTumbuhPadi from "@/components/pages/landing-page/Siklus-Tumbuh-Padi";
 
-const page = () => {
+export default function Home() {
   return (
-    <>
-      <div className="mt-20">
-        <AnalysisDashboard/>
-      </div>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold">Prediksi Fase Tanam per Kecamatan</h2>
-          <p className="text-sm text-muted-foreground">
-            Bandingkan prediksi fase tanam antar kecamatan berdasarkan model Random Forest.
-          </p>
-        </div>
-        <FaseTanamChart />
-      </div>
-    </>
-  )
+    <main>
+      <Hero
+        heading="Menyediakan data hasil KSA untuk perhitungan prediksi hasil panen padi secara akurat."
+        message='"Menyediakan data pertanian yang lebih baik untuk kesejahteraan petani"'
+      />
+      <AboutKsa />
+      <Benefits />
+      <MetodeKsa/>
+      <Algoritma/>
+      <SiklusTumbuhPadi/>
+    </main>
+  );
 }
-
-export default page
