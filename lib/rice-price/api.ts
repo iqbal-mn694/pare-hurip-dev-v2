@@ -125,7 +125,7 @@ export function computeVolatility(values: number[]): number {
  * NEXT_PUBLIC_ dan tidak akan kena CORS.
  */
 export const ML_API_BASE_URL =
-  process.env.NEXT_PUBLIC_ML_API_URL ?? "http://127.0.0.1:8000";
+  process.env.ML_API_URL ?? "http://127.0.0.1:8000";
 
 /** Path proxy same-origin di sisi Next.js (lihat app/api/v1/rice-price/predict/batch/route.ts) */
 const PROXY_BATCH_PATH = "/api/v1/rice-price/predict/batch";
