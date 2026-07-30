@@ -44,7 +44,7 @@ import {
 } from "@/lib/fase-tanam/data";
 
 // Tinggi "lajur" (band) tiap kecamatan di dalam satu chart, dalam unit sumbu-Y.
-const BAND_HEIGHT = 100;
+const BAND_HEIGHT = 120;
 
 interface Loadable {
   series?: KecamatanSeries;
@@ -58,6 +58,8 @@ export default function FaseTanamChart() {
   const [subsegmentByCode, setSubsegmentByCode] = useState<Record<string, string>>({});
   const [dataByCode, setDataByCode] = useState<Record<string, Loadable>>({});
   const [hiddenCodes, setHiddenCodes] = useState<Set<string>>(new Set());
+  const [subsegmentOptions, setSubsegmentOptions] = useState<Record<string, string[]>>({});
+  const [optionsLoading, setOptionsLoading] = useState<Record<string, boolean>>({});
 
   const load = useCallback(async (kec: KecamatanOption, subsegment: string) => {
     setDataByCode((prev) => ({
@@ -80,6 +82,12 @@ export default function FaseTanamChart() {
       setSelectedCodes((prev) => [...prev, kec.code]);
       setSubsegmentByCode((prev) => ({ ...prev, [kec.code]: AGGREGATE_VALUE }));
       void load(kec, AGGREGATE_VALUE);
+      // Fetch subsegmen options dinamis dari database
+      setOptionsLoading((prev) => ({ ...prev, [kec.code]: true }));
+      getSubsegmentOptions(kec.code).then((opts) => {
+        setSubsegmentOptions((prev) => ({ ...prev, [kec.code]: opts }));
+        setOptionsLoading((prev) => ({ ...prev, [kec.code]: false }));
+      });
     } else {
       setSelectedCodes((prev) => prev.filter((c) => c !== kec.code));
       setHiddenCodes((prev) => {
@@ -138,7 +146,7 @@ export default function FaseTanamChart() {
         const normalized = phaseNormalizedPosition(point.phase);
         const bandValue = (total - 1 - i) * BAND_HEIGHT + normalized * BAND_HEIGHT;
 
-        row[`${key}_hist`] = t <= historyLength - 1 ? bandValue : null;
+        row[`${key}_hist`] = t < historyLength ? bandValue : null;
         row[`${key}_pred`] = t >= historyLength - 1 ? bandValue : null;
         row[`${key}_meta`] = {
           phase: point.phase,
@@ -209,8 +217,9 @@ export default function FaseTanamChart() {
               </p>
               {selectedKecamatan.map((kec) => {
                 const value = subsegmentByCode[kec.code] ?? AGGREGATE_VALUE;
-                const options = getSubsegmentOptions(kec.districtCode);
+                const options = subsegmentOptions[kec.code] ?? [];
                 const state = dataByCode[kec.code];
+                const loadingOpts = optionsLoading[kec.code];
                 return (
                   <div key={kec.code} className="flex items-center gap-2">
                     <span
@@ -229,14 +238,20 @@ export default function FaseTanamChart() {
                         <SelectItem value={AGGREGATE_VALUE}>
                           Aggregate (rata-rata)
                         </SelectItem>
-                        {options.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            Subsegmen {opt}
+                        {loadingOpts ? (
+                          <SelectItem value="__loading__" disabled>
+                            Memuat subsegmen...
                           </SelectItem>
-                        ))}
+                        ) : (
+                          options.map((opt) => (
+                            <SelectItem key={opt} value={opt}>
+                              Subsegmen {opt}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
-                    {state?.loading && (
+                    {(state?.loading || loadingOpts) && (
                       <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0" />
                     )}
                   </div>
@@ -252,8 +267,8 @@ export default function FaseTanamChart() {
         <CardHeader>
           <CardTitle className="text-base">Prediksi Fase Tanam</CardTitle>
           <CardDescription>
-            9 bulan data historis dan 3 bulan hasil prediksi model, ditampilkan
-            per kecamatan dalam satu grafik.
+            Data historis dari database dan 3 bulan hasil prediksi model,
+            ditampilkan per kecamatan dalam satu grafik.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -312,12 +327,40 @@ export default function FaseTanamChart() {
                 })}
               </div>
 
-              <div className="relative w-full" style={{ height: Math.max(260, totalBands * 130) }}>
+              <div className="relative w-full" style={{ height: Math.max(300, totalBands * 150) }}>
+                {/* Phase scale labels on the right */}
+                <div className="pointer-events-none absolute inset-y-0 right-3 top-2 bottom-8 flex flex-col justify-between">
+                  {readySeries.map((series, i) => (
+                    <span
+                      key={i}
+                      className="flex flex-col justify-between text-[8px] leading-none text-muted-foreground/50 py-0.5"
+                      style={{ height: BAND_HEIGHT }}
+                    >
+                      <span>Pn</span>
+                      <span>G3</span>
+                      <span>G2</span>
+                      <span>G1</span>
+                      <span>V2</span>
+                      <span>V1</span>
+                    </span>
+                  ))}
+                </div>
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={rows} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
+                  <ComposedChart data={rows} margin={{ top: 24, right: 56, left: 32, bottom: 16 }}>
+                    <CartesianGrid strokeDasharray="2 2" vertical={false} stroke="var(--color-border)" strokeOpacity={0.15} />
 
-                    {/* Area & garis pembatas historis vs prediksi */}
+                    {/* Alternating band backgrounds */}
+                    {Array.from({ length: totalBands }).map((_, i) => (
+                      <ReferenceArea
+                        key={`band-bg-${i}`}
+                        y1={i * BAND_HEIGHT}
+                        y2={(i + 1) * BAND_HEIGHT}
+                        fill="var(--color-muted)"
+                        fillOpacity={i % 2 === 1 ? 0 : 0.3}
+                      />
+                    ))}
+
+                    {/* Area prediksi (soft highlight) */}
                     {boundaryLabel && (
                       <ReferenceArea
                         x1={boundaryLabel}
@@ -325,14 +368,17 @@ export default function FaseTanamChart() {
                         y1={0}
                         y2={totalBands * BAND_HEIGHT}
                         fill="var(--color-primary)"
-                        fillOpacity={0.045}
+                        fillOpacity={0.04}
                       />
                     )}
+
+                    {/* Separator historis → prediksi */}
                     {boundaryLabel && (
                       <ReferenceLine
                         x={boundaryLabel}
                         stroke="var(--color-muted-foreground)"
-                        strokeDasharray="4 4"
+                        strokeDasharray="6 4"
+                        strokeOpacity={0.8}
                         label={{
                           value: "Sekarang → Prediksi",
                           position: "top",
@@ -348,7 +394,8 @@ export default function FaseTanamChart() {
                         key={`band-line-${idx}`}
                         y={idx * BAND_HEIGHT}
                         stroke="var(--color-border)"
-                        strokeDasharray={idx === 0 || idx === totalBands ? "0" : "3 3"}
+                        strokeOpacity={0.6}
+                        strokeDasharray={idx === 0 || idx === totalBands ? "0" : "4 4"}
                       />
                     ))}
 
@@ -376,14 +423,13 @@ export default function FaseTanamChart() {
                             stroke={color}
                             strokeWidth={isHidden ? 1 : 2.5}
                             strokeOpacity={isHidden ? 0.15 : 1}
-                            type="basis"
+                            type="monotone"
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             dot={(props) => renderDot(props, color, isHidden)}
                             activeDot={{ r: 5 }}
                             isAnimationActive
                             animationDuration={600}
-                            connectNulls
                             name={series.kecamatanName}
                           />
                           <Line
@@ -392,7 +438,7 @@ export default function FaseTanamChart() {
                             strokeWidth={isHidden ? 1 : 2.5}
                             strokeOpacity={isHidden ? 0.15 : 1}
                             strokeDasharray="6 4"
-                            type="basis"
+                            type="monotone"
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             dot={(props) => renderDot(props, color, isHidden, true)}
@@ -450,7 +496,7 @@ export default function FaseTanamChart() {
               </div>
 
               <div className="mt-4 rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
-                Skala fase mengikuti label model ML: Vegetatif 1, Vegetatif 2, Generatif 1, Generatif 2, Generatif 3, Panen, dan Persiapan Lahan. Garis solid menunjukkan 9 bulan historis, lalu garis putus-putus menunjukkan 3 bulan prediksi.
+                Skala fase mengikuti label model ML: Vegetatif 1, Vegetatif 2, Generatif 1, Generatif 2, Generatif 3, Panen, dan Persiapan Lahan. Garis solid menunjukkan data historis, lalu garis putus-putus menunjukkan 3 bulan prediksi.
               </div>
 
               {isAnyLoading && (
@@ -478,7 +524,7 @@ function renderDot(props: any, color: string, hidden: boolean, isPrediction = fa
         key={props.key}
         cx={cx}
         cy={cy}
-        r={4}
+        r={4.5}
         fill="var(--color-background)"
         stroke={color}
         strokeWidth={2}
@@ -491,7 +537,7 @@ function renderDot(props: any, color: string, hidden: boolean, isPrediction = fa
       key={props.key}
       cx={cx}
       cy={cy}
-      r={3.5}
+      r={4}
       fill={color}
       opacity={hidden ? 0.15 : 1}
     />
@@ -502,6 +548,11 @@ function renderDot(props: any, color: string, hidden: boolean, isPrediction = fa
 // Tooltip kustom: menampilkan tiap kecamatan yang aktif di titik-x tersebut,
 // dengan nama fase (bukan angka mentah) dan tingkat keyakinan untuk prediksi.
 // ---------------------------------------------------------------------------
+const phaseColors: Record<string, string> = {
+  "1": "#3E5F44", "2": "#5E936C", "3.1": "#93DA97", "3.2": "#B5E8B8",
+  "3.3": "#DAF5DB", "4": "#FED16A", "5": "#A16D28", "6": "#101010",
+};
+
 function PhaseTooltip({ active, payload, label, totalBands }: any) {
   if (!active || !payload || payload.length === 0) return null;
 
@@ -517,8 +568,9 @@ function PhaseTooltip({ active, payload, label, totalBands }: any) {
   }
 
   return (
-    <div className="rounded-lg border bg-background shadow-md p-3 text-xs min-w-45">
-      <p className="font-semibold mb-2">{label}</p>
+    <div className="rounded-lg border shadow-md p-3 text-xs min-w-45"
+      style={{ background: "var(--color-card)", borderColor: "var(--color-border)" }}>
+      <p className="font-semibold mb-2" style={{ color: "var(--color-card-foreground)" }}>{label}</p>
       <div className="space-y-1.5">
         {items.map((meta, idx) => (
           <div key={idx} className="flex items-start gap-2">
@@ -527,19 +579,25 @@ function PhaseTooltip({ active, payload, label, totalBands }: any) {
               style={{ background: meta.color }}
             />
             <div>
-              <p className="font-medium">
+              <p className="font-medium" style={{ color: "var(--color-card-foreground)" }}>
                 {meta.name}{" "}
-                <span className="text-muted-foreground font-normal">
+                <span className="font-normal" style={{ color: "var(--color-muted-foreground)" }}>
                   ({meta.subsegment === "aggregate" ? "Aggregate" : meta.subsegment})
                 </span>
               </p>
-              <p className="text-muted-foreground">
+              <p style={{ color: "var(--color-muted-foreground)" }}>
+                <span
+                  className="inline-block w-2 h-2 rounded-full mr-1 align-middle"
+                  style={{ background: phaseColors[String(meta.phase)] ?? "#78909C" }}
+                />
                 {meta.label}
-                <span className="ml-1 rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide">
+                <span className="ml-1 rounded px-1.5 py-0.5 text-[10px] uppercase tracking-wide"
+                  style={{ background: "var(--color-muted)" }}>
                   {meta.kind === "prediction" ? "Prediksi" : "Historis"}
                 </span>
                 {meta.kind === "prediction" && typeof meta.confidence === "number" && (
-                  <span className="ml-1 rounded bg-primary/10 text-primary px-1 py-0.5">
+                  <span className="ml-1 rounded px-1 py-0.5"
+                    style={{ background: "var(--color-primary)", opacity: 0.1, color: "var(--color-primary)" }}>
                     {Math.round(meta.confidence * 100)}% yakin
                   </span>
                 )}
