@@ -7,14 +7,15 @@
  * grafik, supaya lebih ringkas dan mudah dibaca.
  *
  * Sumber data:
- * - Historis  -> DUMMY (random-walk deterministik per jenis beras).
- *   TODO: ganti dengan data historis asli begitu endpoint/dataset resmi
- *   sudah tersedia (jangan pakai `data/data_harga_beras.json`, kategorinya
- *   sudah tidak relevan dengan jenis beras di bawah).
- * - Prediksi  -> API service ML lokal (`ml-pare-hurip`), endpoint
- *   `/api/v1/lstm-hybrid-price/predict` (1 jenis) dan
- *   `/api/v1/lstm-hybrid-price/predict/batch` (banyak jenis sekaligus).
+ * - Historis  -> dari tabel `rice_prices` di Supabase (database).
+ * - Prediksi  -> di-proxy lewat Next.js API route `/api/v1/rice-price/predict/batch`,
+ *   yang di baliknya manggil service ML lokal (`ml-pare-hurip`), endpoint
+ *   `/api/v1/lstm-hybrid-price/predict/batch`. Selalu dipanggil batch untuk
+ *   SEMUA jenis beras sekaligus (dipakai Card ringkasan); Card grafik cuma
+ *   memfilter hasil ini, tidak fetch ulang per jenis.
  */
+
+import { supabase } from "@/lib/supabase/client";
 
 // ---------------------------------------------------------------------------
 // 1. Jenis beras
@@ -24,8 +25,6 @@ export interface RiceTypeOption {
   id: string;
   /** Nama persis yang dikirim ke API (`rice_type`) */
   label: string;
-  /** Harga dasar dummy (Rp/kg) — dipakai sebagai jangkar random-walk historis */
-  basePrice: number;
   /** Warna identitas garis (historis, solid) */
   color: string;
   /** Warna identitas garis (prediksi, sedikit lebih terang) */
@@ -33,77 +32,39 @@ export interface RiceTypeOption {
 }
 
 export const RICE_TYPES: RiceTypeOption[] = [
-  { id: "bawah-1", label: "Beras Kualitas Bawah I", basePrice: 12550, color: "#ea580c", colorPrediction: "#fb923c" },
-  { id: "bawah-2", label: "Beras Kualitas Bawah II", basePrice: 12050, color: "#d97706", colorPrediction: "#fbbf24" },
-  { id: "medium", label: "Beras Kualitas Medium", basePrice: 13850, color: "#16a34a", colorPrediction: "#4ade80" },
-  { id: "medium-2", label: "Beras Kualitas Medium II", basePrice: 13400, color: "#0d9488", colorPrediction: "#2dd4bf" },
-  { id: "super-1", label: "Beras Kualitas Super I", basePrice: 16150, color: "#2563eb", colorPrediction: "#60a5fa" },
-  { id: "super-2", label: "Beras Kualitas Super II", basePrice: 15600, color: "#7c3aed", colorPrediction: "#a78bfa" },
+  { id: "bawah-1", label: "Beras Kualitas Bawah I", color: "#ea580c", colorPrediction: "#fb923c" },
+  { id: "bawah-2", label: "Beras Kualitas Bawah II", color: "#d97706", colorPrediction: "#fbbf24" },
+  { id: "medium", label: "Beras Kualitas Medium I", color: "#16a34a", colorPrediction: "#4ade80" },
+  { id: "medium-2", label: "Beras Kualitas Medium II", color: "#0d9488", colorPrediction: "#2dd4bf" },
+  { id: "super-1", label: "Beras Kualitas Super I", color: "#2563eb", colorPrediction: "#60a5fa" },
+  { id: "super-2", label: "Beras Kualitas Super II", color: "#7c3aed", colorPrediction: "#a78bfa" },
 ];
 
 export const getRiceTypeById = (id: string): RiceTypeOption | undefined =>
   RICE_TYPES.find((r) => r.id === id);
 
-// ---------------------------------------------------------------------------
-// 2. Generator data historis harian (DUMMY)
-// ---------------------------------------------------------------------------
-
-/** PRNG seed sederhana yang deterministik (supaya data dummy stabil antar-render) */
-function mulberry32(seed: number) {
-  return function () {
-    seed |= 0;
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function hashString(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = (hash << 5) - hash + str.charCodeAt(i);
-    hash |= 0;
-  }
-  return hash;
-}
-
 export interface DailyPricePoint {
-  date: string; // yyyy-mm-dd
+  date: string;
   price: number;
 }
 
-/**
- * Menghasilkan `days` harga harian dummy yang berakhir di `endDate`
- * (inklusif), berbentuk random-walk halus + tren musiman kecil supaya
- * terlihat wajar sebagai harga beras riil.
- */
-export function generateDummyDailyPrices(
-  riceType: RiceTypeOption,
-  days: number,
-  endDate: Date
-): DailyPricePoint[] {
-  const rand = mulberry32(hashString(riceType.id) ^ 0x9e3779b9);
-  const points: DailyPricePoint[] = [];
+export async function fetchRicePriceHistory(
+  riceTypeId: number,
+  days: number
+): Promise<DailyPricePoint[]> {
+  const { data, error } = await supabase
+    .from("rice_prices")
+    .select("date, price")
+    .eq("rice_type_id", riceTypeId)
+    .order("date", { ascending: false })
+    .limit(days);
 
-  let price = riceType.basePrice;
-  const drift = (rand() - 0.5) * 6; // tren harian sangat kecil
+  if (error || !data || data.length === 0) return [];
 
-  for (let i = days - 1; i >= 0; i--) {
-    const date = new Date(endDate);
-    date.setDate(date.getDate() - i);
-
-    const noise = (rand() - 0.5) * riceType.basePrice * 0.006; // ~0.3% noise
-    const seasonal = Math.sin((days - i) / 9) * riceType.basePrice * 0.004;
-    price = price + drift + noise;
-    // tarik lembut ke basePrice supaya tidak melayang jauh
-    price += (riceType.basePrice - price) * 0.03;
-
-    const finalPrice = Math.max(0, Math.round((price + seasonal) / 50) * 50);
-    points.push({ date: date.toISOString().slice(0, 10), price: finalPrice });
-  }
-
-  return points;
+  return data.reverse().map((row) => ({
+    date: row.date,
+    price: row.price,
+  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -155,11 +116,19 @@ export function computeVolatility(values: number[]): number {
 }
 
 // ---------------------------------------------------------------------------
-// 4. Client API prediksi (LSTM Hybrid)
+// 4. Client API prediksi (LSTM Hybrid) — diproxy lewat Next.js API route
 // ---------------------------------------------------------------------------
 
+/**
+ * Base URL ML API HANYA dipakai server-side (di dalam API route Next.js).
+ * Browser tidak pernah manggil ini langsung lagi — makanya tidak perlu
+ * NEXT_PUBLIC_ dan tidak akan kena CORS.
+ */
 export const ML_API_BASE_URL =
   process.env.NEXT_PUBLIC_ML_API_URL ?? "http://127.0.0.1:8000";
+
+/** Path proxy same-origin di sisi Next.js (lihat app/api/v1/rice-price/predict/batch/route.ts) */
+const PROXY_BATCH_PATH = "/api/v1/rice-price/predict/batch";
 
 export interface PricePredictionPoint {
   target_date: string;
@@ -189,50 +158,28 @@ interface PredictBatchResponse {
   results: RicePricePredictionResult[];
 }
 
-async function postJson<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${ML_API_BASE_URL}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    throw new Error(`Permintaan ke ${path} gagal (status ${res.status})`);
-  }
-  return res.json() as Promise<T>;
-}
-
-export async function predictRicePriceSingle(
-  req: PredictSingleRequest
-): Promise<RicePricePredictionResult> {
-  return postJson<RicePricePredictionResult>(
-    "/api/v1/lstm-hybrid-price/predict",
-    req
-  );
-}
-
-export async function predictRicePriceBatch(
-  items: PredictSingleRequest[]
-): Promise<RicePricePredictionResult[]> {
-  const body: PredictBatchRequest = { items };
-  const data = await postJson<PredictBatchResponse>(
-    "/api/v1/lstm-hybrid-price/predict/batch",
-    body
-  );
-  return data.results ?? [];
-}
-
 /**
- * Ambil prediksi untuk satu atau lebih jenis beras sekaligus, otomatis
- * memilih endpoint single vs batch sesuai jumlah item (mengikuti kontrak
- * API: endpoint single untuk 1 jenis, batch untuk >1 jenis).
+ * Ambil prediksi untuk satu atau lebih jenis beras. Selalu lewat endpoint
+ * batch (walau cuma 1 item) — endpoint single non-batch tidak dipakai lagi
+ * karena pemanggil (RicePricePredictionChart) selalu mengirim seluruh
+ * RICE_TYPES sekaligus dalam satu request.
  */
 export async function predictRicePrices(
   items: PredictSingleRequest[]
 ): Promise<RicePricePredictionResult[]> {
   if (items.length === 0) return [];
-  if (items.length === 1) {
-    const result = await predictRicePriceSingle(items[0]);
-    return [result];
+
+  const body: PredictBatchRequest = { items };
+  const res = await fetch(PROXY_BATCH_PATH, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Permintaan prediksi harga gagal (status ${res.status})`);
   }
-  return predictRicePriceBatch(items);
+
+  const data = (await res.json()) as PredictBatchResponse;
+  return data.results ?? [];
 }

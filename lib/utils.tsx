@@ -111,6 +111,7 @@ export const displayOrder = [
   3.3,   // Generatif 3
   4.0,   // Panen
   5.0,   // Persiapan Lahan
+  6.0,   // Puso
 ];
 
 export const phaseToYValue: { [key: string]: number } = {};
@@ -126,6 +127,7 @@ export const yValueToLabel: { [key: string]: string } = {
   "4": "Generatif 3",
   "5": "Panen",
   "6": "Persiapan Lahan",
+  "7": "Puso",
 };
 
 export const yAxisTicksNumeric = displayOrder.map((_, index) => index);
@@ -139,7 +141,7 @@ export const yAxisValueMap: { [key: string]: string } = {
   "4": "Panen",
   "5": "Persiapan Lahan",
   "6": "Puso",
-  "8": "Bukan Sawah",
+  "8": "Bukan Lahan Pertanian",
 };
 
 export const getNextMonthKey = (monthKey: string): string => {
