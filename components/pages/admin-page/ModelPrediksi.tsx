@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Activity, AlertCircle, BrainCircuit, RefreshCw } from "lucide-react"
+import { Activity, BrainCircuit, RefreshCw } from "lucide-react"
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
@@ -92,7 +92,7 @@ export default function ModelPrediksi() {
   const [rfHistory, setRfHistory] = React.useState(RANDOM_FOREST_HISTORY)
   const [lstmHistory, setLstmHistory] = React.useState(LSTM_HISTORY)
   const [isTraining, setIsTraining] = React.useState(false)
-  const [progress, setProgress] = React.useState(0)
+  const setProgress = React.useState(0)[1]
   const [message, setMessage] = React.useState("")
 
   React.useEffect(() => {
@@ -324,7 +324,6 @@ export default function ModelPrediksi() {
                           <TableCell className="font-medium">{PHASE_LABELS[rowIndex]}</TableCell>
                           {row.map((value, columnIndex) => {
                             const isDiagonal = rowIndex === columnIndex
-                            const intensity = isDiagonal ? Math.max(0.25, value / 100) : 0.12
                             return (
                               <TableCell key={`${rowIndex}-${columnIndex}`} className="text-center">
                                 <span

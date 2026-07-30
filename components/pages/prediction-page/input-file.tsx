@@ -43,7 +43,6 @@ import {
   AreaChart,
   MapPin,
   Globe,
-  Download,
   FileSpreadsheet,
   RotateCcw,
   Info,
@@ -58,11 +57,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import {
-  ValueType,
-  NameType,
-  Payload,
-} from "recharts/types/component/DefaultTooltipContent";
+
 import {
   Accordion,
   AccordionContent,
@@ -107,101 +102,18 @@ const TasikCityMapDynamic = dynamic(() => import("@/components/TasikCityMap"), {
   ),
 });
 
-// --- Helper Functions & Constants ---
-const formatKsaDate = (header: string, short = false): string => {
-  const headerStr = String(header);
-  if (!/^\d{3,}$/.test(headerStr) && isNaN(parseInt(headerStr))) return header;
-  try {
-    const year = parseInt(headerStr.slice(-2));
-    const month = parseInt(headerStr.slice(0, -2));
-    const fullYear = 2000 + year;
-    const monthNames = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "Mei",
-      "Jun",
-      "Jul",
-      "Agu",
-      "Sep",
-      "Okt",
-      "Nov",
-      "Des",
-    ];
-    const longMonthNames = [
-      "Januari",
-      "Februari",
-      "Maret",
-      "April",
-      "Mei",
-      "Juni",
-      "Juli",
-      "Agustus",
-      "September",
-      "Oktober",
-      "November",
-      "Desember",
-    ];
-    if (month >= 1 && month <= 12)
-      return short
-        ? `${monthNames[month - 1]} '${year}`
-        : `${longMonthNames[month - 1]} ${fullYear}`;
-    return header;
-  } catch (error) {
-    return header;
-  }
-};
-const kecamatanMap: { [key: string]: string } = {
-  "3278071": "Bungursari",
-  "3278030": "Cibeureum",
-  "3278050": "Cihideung",
-  "3278080": "Cipedes",
-  "3278070": "Indihiang",
-  "3278010": "Kawalu",
-  "3278060": "Mangkubumi",
-  "3278031": "Purbaratu",
-  "3278020": "Tamansari",
-  "3278040": "Tawang",
-};
+import {
+  formatKsaDate,
+  kecamatanMap,
+  customKecamatanOrder,
+  getModus,
+  validateStructure,
+  getNextMonthKey,
+  CustomTooltip,
+} from "@/lib/utils";
+// --- Local Constants (berbeda dari lib/utils karena pakai 13.0 Pasca Panen) ---
+// (formatKsaDate, kecamatanMap, customKecamatanOrder diimpor dari @/lib/utils)
 
-// --- KODE BARU: Definisikan urutan kecamatan yang diinginkan ---
-const customKecamatanOrder = [
-  "Kawalu",
-  "Tamansari",
-  "Cibeureum",
-  "Purbaratu",
-  "Tawang",
-  "Cihideung",
-  "Mangkubumi",
-  "Indihiang",
-  "Bungursari",
-  "Cipedes",
-];
-
-const getModus = (arr: any[]): any => {
-  if (!arr.length) return null;
-  const freqMap: { [key: string]: number } = {};
-  let maxFreq = 0;
-  let modus: any = null;
-  arr.forEach((item) => {
-    const key = String(item);
-    freqMap[key] = (freqMap[key] || 0) + 1;
-    if (freqMap[key] > maxFreq) {
-      maxFreq = freqMap[key];
-      modus = item;
-    }
-  });
-  return modus;
-};
-const validateStructure = (headers: string[]): string | null => {
-  const lowercasedHeaders = headers.map((h) => h.toLowerCase().trim());
-  if (!lowercasedHeaders.includes("id segmen"))
-    return "Struktur file tidak sesuai. Kolom 'id segmen' tidak ditemukan.";
-  if (!lowercasedHeaders.includes("subsegmen"))
-    return "Struktur file tidak sesuai. Kolom 'subsegmen' tidak ditemukan.";
-  return null;
-};
 const displayOrder = [1.0, 2.0, 3.1, 3.2, 3.3, 4.0, 13.0, 5.0];
 const yValueToLabel: { [key: string]: string } = {
   "0": "Vegetatif 1",
@@ -245,45 +157,6 @@ const getPhaseColor = (phase: number | null): string => {
       return "#78909C";
   }
 };
-// --- CUSTOM TOOLTIP DIPERBAIKI ---
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <Card className="p-2 text-sm shadow-lg">
-        <CardHeader className="p-1 font-bold border-b mb-1">
-          {formatKsaDate(String(label))}
-        </CardHeader>
-        <CardContent className="p-1">
-          {payload.map((pld: Payload<ValueType, NameType>) => {
-            const roundedValue =
-              pld.value !== null && pld.value !== undefined
-                ? Math.round(pld.value as number)
-                : null;
-
-            return (
-              <div key={pld.dataKey as React.Key} className="flex items-center">
-                <div
-                  style={{ backgroundColor: pld.color as string }}
-                  className="w-2.5 h-2.5 rounded-full mr-2 shrink-0"
-                ></div>
-                <span className="flex-1 truncate">
-                  {pld.dataKey as string}:{" "}
-                </span>
-                <span className="font-semibold ml-2">
-                  {roundedValue !== null
-                    ? yValueToLabel[String(roundedValue)] || "N/A"
-                    : "N/A"}
-                </span>
-              </div>
-            );
-          })}
-        </CardContent>
-      </Card>
-    );
-  }
-  return null;
-};
-
 const InputFile = () => {
   const [data, setData] = useState<ExcelData[] | null>(null);
   const [columns, setColumns] = useState<string[]>([]);
@@ -737,8 +610,8 @@ const InputFile = () => {
       />
 
       {!data && !isLoading && !error && (
-        <div className="space-y-6">
-          <Card className="w-full shadow-sm">
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="w-full shadow-sm lg:order-1">
             <CardContent>
               <div className="flex text-center items-center rounded-lg justify-center flex-col w-full space-y-4 lg:py-14 py-4 px-2 bg-muted dark:bg-gray-800/50">
                 <FileSpreadsheet className="w-20 h-20 text-gray-400" />
@@ -746,23 +619,10 @@ const InputFile = () => {
                   Silakan unggah file untuk melakukan import data
                 </h2>
                 <p className="text-gray-500 dark:text-gray-400 text-sm text-center m-auto max-w-2xl">
-                  Gunakan file Excel (.xlsx) yang berisi data KSA. Untuk
-                  memastikan format yang benar, Anda bisa mengunduh template
-                  yang telah kami sediakan dengan menekan tombol{" "}
-                  <b>'Unduh Template'</b> di bawah ini.
+                  Gunakan file Excel (.xlsx) yang berisi data KSA untuk
+                  melakukan import dan melihat prediksi fase tanam.
                 </p>
                 <div className="flex flex-col sm:flex-row justify-center gap-4 pt-2">
-                  <a
-                    href="https://github.com/pandupan/material_source_magang_bps_tasikmalaya/blob/main/dataset_ksa_tasik_2025_v9.xlsx"
-                  >
-                    <Button
-                      variant="outline"
-                      className="text-sm lg:text-base gap-2 w-full sm:w-auto"
-                    >
-                      <Download className="w-5 h-5" />
-                      Unduh File Template
-                    </Button>
-                  </a>
                   <Button
                     className="text-sm lg:text-base gap-2 bg-[#016630]"
                     onClick={handleImportClick}
@@ -775,7 +635,7 @@ const InputFile = () => {
             </CardContent>
           </Card>
 
-          <Card className="shadow-sm">
+          <Card className="shadow-sm lg:order-2">
             <CardHeader>
               <CardTitle className="text-3xl font-bold">
                 Bingung dengan format file?
@@ -843,7 +703,7 @@ Contoh : 124 menunjukkan bulan Januari dan 2024 "
       )}
 
       {data && !isLoading && !error && (
-        <>
+        <div className="space-y-6">
           <Card>
             <CardHeader>
               <div className="flex justify-between items-start">
@@ -870,6 +730,8 @@ Contoh : 124 menunjukkan bulan Januari dan 2024 "
               </div>
             </CardHeader>
           </Card>
+
+          <div className="grid gap-6 md:grid-cols-2">
 
           {/* Sisa komponen visualisasi (Grafik dan Peta) tetap sama */}
           <Card>
@@ -1224,7 +1086,8 @@ Contoh : 124 menunjukkan bulan Januari dan 2024 "
               />
             </CardContent>
           </Card>
-        </>
+            </div>
+          </div>
       )}
     </section>
   );

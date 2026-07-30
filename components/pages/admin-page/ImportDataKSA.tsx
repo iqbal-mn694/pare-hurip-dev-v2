@@ -8,34 +8,25 @@ import { AlertTriangle, CheckCircle, Download, Upload, XCircle } from "lucide-re
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
-const VALID_PHASE_CODES = new Set(["1", "2", "3", "4", "5", "6", "7", "8"])
-
-const DUMMY_LONG_FORMAT_ROWS = [
-  { id_segmen: "123456789", subsegmen: "A1", periode: "2024-01", fase_tanam: "1" },
-  { id_segmen: "123456790", subsegmen: "A2", periode: "2024-02", fase_tanam: "2" },
-  { id_segmen: "123456791", subsegmen: "A3", periode: "2024-03", fase_tanam: "3" },
-  { id_segmen: "123456792", subsegmen: "A4", periode: "2024-04", fase_tanam: "4" },
-  { id_segmen: "123456793", subsegmen: "A5", periode: "2024-05", fase_tanam: "5" },
-  { id_segmen: "123456794", subsegmen: "A6", periode: "2024-06", fase_tanam: "6" },
-  { id_segmen: "123456795", subsegmen: "A7", periode: "2024-07", fase_tanam: "7" },
-  { id_segmen: "123456796", subsegmen: "A8", periode: "2024-08", fase_tanam: "8" },
-  { id_segmen: "12345679", subsegmen: "B1", periode: "2024-09", fase_tanam: "7.1" },
-  { id_segmen: "12345679a", subsegmen: "B2", periode: "2024-10", fase_tanam: "4.5" },
-  { id_segmen: "123456797", subsegmen: "B3", periode: "2024-11", fase_tanam: "9" },
-  { id_segmen: "123456798", subsegmen: "B4", periode: "2024-12", fase_tanam: "1" },
-  { id_segmen: "123456799", subsegmen: "B5", periode: "2025-01", fase_tanam: "2" },
-  { id_segmen: "123456799", subsegmen: "B5", periode: "2025-01", fase_tanam: "2" },
-  { id_segmen: "123456799", subsegmen: "B5", periode: "2025-01", fase_tanam: "3" },
-  { id_segmen: "123456800", subsegmen: "C1", periode: "2025-02", fase_tanam: "8" },
+const MONTH_LABELS = [
+  "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+  "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
 ]
 
+const INDONESIAN_MONTH: Record<string, number> = {
+  januari: 1, februari: 2, maret: 3, april: 4, mei: 5, juni: 6,
+  juli: 7, agustus: 8, september: 9, oktober: 10, november: 11, desember: 12,
+  jan: 1, feb: 2, mar: 3, apr: 4, jun: 6, jul: 7, agu: 8,
+  sep: 9, okt: 10, nov: 11, des: 12,
+}
+
 type ImportRow = {
-  id_segmen: string
-  subsegmen: string
+  segment_id: string
+  subsegment: string
   periode: string
-  fase_tanam: string
+  phase: string
 }
 
 type ValidatedImportRow = ImportRow & {
@@ -49,11 +40,7 @@ function normalizeField(value: unknown) {
   return String(value ?? "").trim()
 }
 
-function buildDummyRows(): ImportRow[] {
-  return [...DUMMY_LONG_FORMAT_ROWS]
-}
-
-function tryFixIdSegmen(raw: string): { value: string; fixed: boolean } | null {
+function tryFixSegmentId(raw: string): { value: string; fixed: boolean } | null {
   if (/^\d{9}$/.test(raw)) return { value: raw, fixed: false }
 
   const digitsOnly = raw.replace(/\D/g, "")
@@ -64,167 +51,251 @@ function tryFixIdSegmen(raw: string): { value: string; fixed: boolean } | null {
   return null
 }
 
-function tryFixFaseTanam(raw: string): { value: string; fixed: boolean } | null {
-  if (VALID_PHASE_CODES.has(raw)) return { value: raw, fixed: false }
+function detectWideFormat(headers: string[]): string[] | null {
+  const monthHeaders = headers.filter((h) => {
+    const lower = h.toLowerCase()
+    return MONTH_LABELS.some((m) => lower.startsWith(m.toLowerCase())) ||
+      /^\d{3,4}$/.test(h.trim())
+  })
+  return monthHeaders.length > 0 ? monthHeaders : null
+}
 
-  const asNumber = Number(raw)
-  if (!isNaN(asNumber)) {
-    const rounded = Math.round(asNumber)
-    const clamped = Math.min(8, Math.max(1, rounded))
-    if (clamped >= 1 && clamped <= 8) {
-      return { value: String(clamped), fixed: true }
+function parseWideFormat(
+  raw: unknown[][],
+  headers: string[],
+  monthCols: string[],
+  segmenIdx: number,
+  subsegIdx: number,
+  defaultYear?: number
+): ImportRow[] {
+  const rows: ImportRow[] = []
+  for (let i = 1; i < raw.length; i++) {
+    const row = raw[i]
+    const segmentId = normalizeField(row[segmenIdx] ?? "")
+    const subsegment = normalizeField(row[subsegIdx] ?? "")
+    if (!segmentId || !subsegment) continue
+
+    for (const monthCol of monthCols) {
+      const colIdx = headers.indexOf(monthCol)
+      if (colIdx === -1) continue
+      const phaseRaw = row[colIdx]
+      if (phaseRaw === "" || phaseRaw === undefined || phaseRaw === null) continue
+      const phase = normalizeField(phaseRaw)
+      if (!phase) continue
+
+      let monthNum: number | null = null
+      let year: number | null = null
+      const lower = monthCol.toLowerCase()
+
+      MONTH_LABELS.forEach((m, idx) => {
+        if (lower.startsWith(m.toLowerCase())) monthNum = idx + 1
+      })
+
+      if (monthNum) {
+        year = defaultYear ?? null
+      } else {
+        const digits = monthCol.replace(/\D/g, "")
+        const m = parseInt(digits.slice(0, -2))
+        if (m >= 1 && m <= 12) {
+          monthNum = m
+          const yy = parseInt(digits.slice(-2))
+          year = yy > 50 ? 1900 + yy : 2000 + yy
+        }
+      }
+      if (!monthNum || !year) continue
+
+      const periode = `${year}-${String(monthNum).padStart(2, "0")}`
+      rows.push({ segment_id: segmentId, subsegment, periode, phase })
     }
   }
-
-  return null
+  return rows
 }
 
-function validateImportRows(rows: ImportRow[]): ValidatedImportRow[] {
-  const fixedRows = rows.map((row) => {
-    const errors: string[] = []
-    const autoFixes: string[] = []
+function parseLongFormat(
+  headers: string[],
+  raw: unknown[][],
+  defaultPeriode?: string
+): ImportRow[] {
+  const rows: ImportRow[] = []
+  for (let i = 1; i < raw.length; i++) {
+    const row = raw[i]
 
-    let id_segmen = row.id_segmen
-    const idFix = tryFixIdSegmen(row.id_segmen)
-    if (idFix) {
-      id_segmen = idFix.value
-      if (idFix.fixed) autoFixes.push(`ID segmen dikoreksi jadi "${idFix.value}"`)
-    } else {
-      errors.push("ID segmen harus 9 digit angka")
-    }
+    const segmentId = normalizeField(
+      row[headers.findIndex((h) => ["segment_id", "id_segmen", "segmen", "id segmen"].includes(h.toLowerCase()))] ?? ""
+    )
+    const subsegment = normalizeField(
+      row[headers.findIndex((h) => ["subsegment", "subsegmen", "sub segmen"].includes(h.toLowerCase()))] ?? ""
+    )
+    const periodeIdx = headers.findIndex((h) => h.toLowerCase() === "periode")
+    const phaseIdx = headers.findIndex(
+      (h) => ["phase", "fase_tanam", "fase tanam", "n"].includes(h.toLowerCase())
+    )
 
-    let fase_tanam = row.fase_tanam
-    const faseFix = tryFixFaseTanam(row.fase_tanam)
-    if (faseFix) {
-      fase_tanam = faseFix.value
-      if (faseFix.fixed) autoFixes.push(`fase_tanam dikoreksi jadi "${faseFix.value}"`)
-    } else {
-      errors.push("fase_tanam tidak valid")
-    }
+    let periode = periodeIdx >= 0 ? normalizeField(row[periodeIdx] ?? "") : ""
 
-    return { ...row, id_segmen, fase_tanam, errors, autoFixes }
-  })
-
-  const keyCount = new Map<string, number>()
-  fixedRows.forEach((row) => {
-    const key = `${row.id_segmen}|${row.subsegmen}|${row.periode}`
-    keyCount.set(key, (keyCount.get(key) ?? 0) + 1)
-  })
-
-  const seenKeys = new Set<string>()
-
-  return fixedRows.map((row) => {
-    const key = `${row.id_segmen}|${row.subsegmen}|${row.periode}`
-    const isDuplicate = (keyCount.get(key) ?? 0) > 1
-    let skip = false
-
-    if (isDuplicate) {
-      if (seenKeys.has(key)) {
-        row.errors.push("Duplikat kombinasi segmen + subsegmen + periode (baris ini dilewati otomatis)")
-        skip = true
-      } else {
-        row.autoFixes.push("Duplikat ditemukan -- baris pertama ini yang akan disimpan")
+    if (!periode) {
+      const tanggalIdx = headers.findIndex((h) => h.toLowerCase() === "tanggal")
+      if (tanggalIdx >= 0) {
+        const rawDate = row[tanggalIdx]
+        if (rawDate instanceof Date && !isNaN(rawDate.getTime())) {
+          const y = rawDate.getFullYear()
+          const m = String(rawDate.getMonth() + 1).padStart(2, "0")
+          periode = `${y}-${m}`
+        }
       }
-      seenKeys.add(key)
     }
 
-    return { ...row, isDuplicate, skip }
-  })
+    if (!periode) {
+      periode = defaultPeriode ?? ""
+    }
+
+    const phase = phaseIdx >= 0 ? normalizeField(row[phaseIdx] ?? "") : ""
+
+    rows.push({ segment_id: segmentId, subsegment, periode, phase })
+  }
+  return rows
 }
 
-function parseExcelToRows(file: File): Promise<ImportRow[]> {
+function parseExcelToRows(file: File, defaultYear?: number, defaultPeriode?: string): Promise<ImportRow[]> {
   return new Promise(async (resolve) => {
     try {
       const arrayBuffer = await file.arrayBuffer()
       const workbook = XLSX.read(arrayBuffer, { type: "array" })
       const sheet = workbook.Sheets[workbook.SheetNames[0]]
       const json: Array<Record<string, unknown>> = XLSX.utils.sheet_to_json(sheet, { defval: "" })
+      const raw: unknown[][] = XLSX.utils.sheet_to_json(sheet, { defval: "", header: 1 })
 
-      if (json.length === 0) {
-        resolve(buildDummyRows())
+      if (json.length === 0 || raw.length < 2) {
+        resolve([])
         return
       }
 
-      const rows: ImportRow[] = []
-      const baseKeys = [
-        "id_segmen",
-        "segmen",
-        "id segmen",
-        "subsegmen",
-        "sub segmen",
-        "periode",
-        "fase_tanam",
-        "fase tanam",
-      ]
+      const headers = raw[0].map((h) => String(h).trim())
+      const monthCols = detectWideFormat(headers)
 
-      json.forEach((row) => {
-        const normalizedRow = Object.fromEntries(
-          Object.entries(row).map(([key, value]) => [String(key).trim().toLowerCase(), value])
+      let rows: ImportRow[]
+
+      if (monthCols) {
+        const segmenIdx = headers.findIndex(
+          (h) => ["id segmen", "segmen", "segment_id", "id_segmen"].includes(h.toLowerCase())
+        )
+        const subsegIdx = headers.findIndex(
+          (h) => ["subsegmen", "subsegment", "sub segmen"].includes(h.toLowerCase())
         )
 
-        const id_segmen = normalizeField(
-          normalizedRow["id_segmen"] ?? normalizedRow["segmen"] ?? normalizedRow["id segmen"]
-        )
-        const subsegmen = normalizeField(
-          normalizedRow["subsegmen"] ?? normalizedRow["sub segmen"]
-        )
-        const periode = normalizeField(normalizedRow["periode"])
-        const fase_tanam = normalizeField(
-          normalizedRow["fase_tanam"] ?? normalizedRow["fase tanam"]
-        )
-
-        const otherKeys = Object.keys(normalizedRow).filter(
-          (key) => !baseKeys.includes(key)
-        )
-
-        if (otherKeys.length > 0) {
-          otherKeys.forEach((key) => {
-            const value = normalizeField(normalizedRow[key])
-            if (value) {
-              rows.push({
-                id_segmen: id_segmen || "123456789",
-                subsegmen: subsegmen || `A${Math.floor(Math.random() * 10) + 1}`,
-                periode: periode || key,
-                fase_tanam: value || fase_tanam || "1",
-              })
-            }
-          })
-        } else {
-          rows.push({
-            id_segmen: id_segmen || "123456789",
-            subsegmen: subsegmen || "A1",
-            periode: periode || "2024-01",
-            fase_tanam: fase_tanam || "1",
-          })
+        if (segmenIdx === -1 || subsegIdx === -1) {
+          resolve([])
+          return
         }
-      })
 
-      resolve(rows.length > 0 ? rows : buildDummyRows())
-    } catch (error) {
-      resolve(buildDummyRows())
+        rows = parseWideFormat(raw, headers, monthCols, segmenIdx, subsegIdx, defaultYear)
+      } else {
+        rows = parseLongFormat(headers, raw, defaultPeriode)
+      }
+
+      resolve(rows)
+    } catch {
+      resolve([])
     }
   })
 }
 
+function extractFileInfo(name: string): { periode?: string; year?: number } {
+  const raw = name.replace(/\.\w+$/, "").toLowerCase()
+  let foundMonth: number | null = null
+  let foundYear: number | null = null
+
+  for (const [word, num] of Object.entries(INDONESIAN_MONTH)) {
+    if (raw.includes(word)) {
+      foundMonth = num
+      break
+    }
+  }
+
+  const yearMatch = raw.match(/\b(20\d{2})\b/)
+  if (yearMatch) foundYear = parseInt(yearMatch[1])
+
+  if (foundMonth && foundYear) {
+    return { periode: `${foundYear}-${String(foundMonth).padStart(2, "0")}`, year: foundYear }
+  }
+  if (foundYear) return { year: foundYear }
+  return {}
+}
+
 export default function ImportDataKSA() {
   const [stage, setStage] = React.useState<"upload" | "parsing" | "preview" | "saved">("upload")
-  const [selectedFile, setSelectedFile] = React.useState<File | null>(null)
+  const setSelectedFile = React.useState<File | null>(null)[1]
   const [fileError, setFileError] = React.useState<string>("")
-  const [rows, setRows] = React.useState<ValidatedImportRow[]>([])
+  const [validatedRows, setValidatedRows] = React.useState<ValidatedImportRow[]>([])
   const [isLoading, setIsLoading] = React.useState(false)
   const [savedCount, setSavedCount] = React.useState(0)
   const [isSaving, setIsSaving] = React.useState(false)
   const [saveError, setSaveError] = React.useState<string>("")
+  const [periodeInput, setPeriodeInput] = React.useState("")
 
-  const savableRows = rows.filter((row) => row.errors.length === 0 && !row.skip)
+  const savableRows = validatedRows.filter((row) => row.errors.length === 0 && !row.skip)
   const validRowCount = savableRows.length
-  const invalidRowCount = rows.length - validRowCount
-  const autoFixedCount = rows.filter((row) => row.autoFixes.length > 0 && row.errors.length === 0).length
+  const invalidRowCount = validatedRows.length - validRowCount
+  const autoFixedCount = validatedRows.filter((row) => row.autoFixes.length > 0 && row.errors.length === 0).length
+
+  function validateRows(rows: ImportRow[]): ValidatedImportRow[] {
+    const fixedRows = rows.map((row) => {
+      const errors: string[] = []
+      const autoFixes: string[] = []
+
+      let segment_id = row.segment_id
+      const idFix = tryFixSegmentId(row.segment_id)
+      if (idFix) {
+        segment_id = idFix.value
+        if (idFix.fixed) autoFixes.push(`ID segmen dikoreksi jadi "${idFix.value}"`)
+      } else {
+        errors.push("ID segmen harus 9 digit angka")
+      }
+
+      if (!row.subsegment) {
+        errors.push("Subsegmen tidak boleh kosong")
+      }
+      if (!row.periode) {
+        errors.push("Periode tidak boleh kosong")
+      }
+      if (!row.phase) {
+        errors.push("Phase tidak boleh kosong")
+      }
+
+      return { ...row, segment_id, errors, autoFixes }
+    })
+
+    const keyCount = new Map<string, number>()
+    fixedRows.forEach((row) => {
+      const key = `${row.segment_id}|${row.subsegment}|${row.periode}`
+      keyCount.set(key, (keyCount.get(key) ?? 0) + 1)
+    })
+
+    const seenKeys = new Set<string>()
+
+    return fixedRows.map((row) => {
+      const key = `${row.segment_id}|${row.subsegment}|${row.periode}`
+      const isDuplicate = (keyCount.get(key) ?? 0) > 1
+      let skip = false
+
+      if (isDuplicate) {
+        if (seenKeys.has(key)) {
+          row.errors.push("Duplikat kombinasi segmen + subsegmen + periode (baris ini dilewati otomatis)")
+          skip = true
+        } else {
+          row.autoFixes.push("Duplikat ditemukan -- baris pertama ini yang akan disimpan")
+        }
+        seenKeys.add(key)
+      }
+
+      return { ...row, isDuplicate, skip }
+    })
+  }
 
   const handleDownloadTemplate = () => {
     const templateRows = [
-      { id_segmen: "123456789", subsegmen: "A1", periode: "2024-01", fase_tanam: "1" },
-      { id_segmen: "123456790", subsegmen: "A2", periode: "2024-02", fase_tanam: "2" },
+      { segment_id: "123456789", subsegment: "A1", periode: "2024-01", phase: "3.1" },
+      { segment_id: "123456790", subsegment: "A2", periode: "2024-02", phase: "4" },
     ]
     const workbook = XLSX.utils.book_new()
     const worksheet = XLSX.utils.json_to_sheet(templateRows)
@@ -251,9 +322,13 @@ export default function ImportDataKSA() {
     setStage("parsing")
     setIsLoading(true)
 
-    parseExcelToRows(file).then((parsedRows) => {
-      const validatedRows = validateImportRows(parsedRows)
-      setRows(validatedRows)
+    const fileInfo = extractFileInfo(file.name)
+    const effectivePeriode = periodeInput || (fileInfo.periode ?? "")
+    const effectiveYear = fileInfo.year ?? (periodeInput ? parseInt(periodeInput.split("-")[0]) : undefined)
+
+    parseExcelToRows(file, effectiveYear || undefined, effectivePeriode || undefined).then((parsedRows) => {
+      const validated = validateRows(parsedRows)
+      setValidatedRows(validated)
       setIsLoading(false)
       setStage("preview")
     })
@@ -263,20 +338,21 @@ export default function ImportDataKSA() {
     setStage("upload")
     setSelectedFile(null)
     setFileError("")
-    setRows([])
+    setValidatedRows([])
     setSavedCount(0)
     setSaveError("")
+    setPeriodeInput("")
   }
 
   const handleSaveToDatabase = async () => {
     setIsSaving(true)
     setSaveError("")
 
-    const payload = savableRows.map(({ id_segmen, subsegmen, periode, fase_tanam }) => ({
-      id_segmen,
-      subsegmen,
+    const payload = savableRows.map(({ segment_id, subsegment, periode, phase }) => ({
+      segment_id,
+      subsegment,
       periode,
-      fase_tanam: Number(fase_tanam),
+      phase,
     }))
 
     if (payload.length === 0) {
@@ -296,8 +372,8 @@ export default function ImportDataKSA() {
       }))
 
       const { error, count } = await supabase
-        .from("ksa_segments")
-        .upsert(rowsToInsert, { onConflict: "id_segmen,subsegmen,periode", count: "exact" })
+        .from("data_ksa")
+        .upsert(rowsToInsert, { onConflict: "segment_id,subsegment,periode", count: "exact" })
 
       if (error) {
         setSaveError(error.message || "Gagal menyimpan data ke database.")
@@ -388,7 +464,24 @@ export default function ImportDataKSA() {
               <Download className="size-4" /> Unduh Template
             </Button>
           </CardHeader>
-          <CardContent className="px-5 pb-5">
+          <CardContent className="space-y-4 px-5 pb-5">
+            <div className="flex flex-wrap items-end gap-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Tahun / Periode <span className="text-slate-400">(opsional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={periodeInput}
+                  onChange={(e) => setPeriodeInput(e.target.value)}
+                  placeholder="contoh: 2025 atau 2025-06"
+                  className="flex h-10 w-56 rounded-2xl border border-slate-300 bg-white px-4 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                />
+                <p className="text-xs text-slate-400">
+                  Diisi jika file tidak memiliki kolom <code>periode</code>. Terisi otomatis dari nama file jika dikenali.
+                </p>
+              </div>
+            </div>
             <div
               onDragOver={(event) => event.preventDefault()}
               onDrop={handleDrop}
@@ -397,7 +490,7 @@ export default function ImportDataKSA() {
               <Upload className="mx-auto mb-3 size-6 text-emerald-600" />
               <p className="text-sm font-semibold">Tarik dan lepas file di sini</p>
               <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                Hanya file .xlsx dan .xls yang diterima.
+                Mendukung format wide (kolom bulan), hybrid (nama bulan), maupun long (segment_id, subsegment, periode, phase).
               </p>
               <label className="mt-5 inline-flex cursor-pointer items-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700">
                 Pilih File
@@ -459,17 +552,17 @@ export default function ImportDataKSA() {
                       <TableHead>Segmen</TableHead>
                       <TableHead>Subsegmen</TableHead>
                       <TableHead>Periode</TableHead>
-                      <TableHead>Fase Tanam</TableHead>
+                      <TableHead>Phase</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {rows.map((row, index) => {
+                    {validatedRows.map((row, index) => {
                       const rowHasBlockingError = row.errors.length > 0
                       const rowHasAutoFix = row.autoFixes.length > 0 && !rowHasBlockingError
                       return (
                         <TableRow
-                          key={`${row.id_segmen}-${row.subsegmen}-${row.periode}-${index}`}
+                          key={`${row.segment_id}-${row.subsegment}-${row.periode}-${index}`}
                           className={
                             rowHasBlockingError
                               ? "bg-rose-50 dark:bg-rose-950/40"
@@ -478,10 +571,10 @@ export default function ImportDataKSA() {
                               : ""
                           }
                         >
-                          <TableCell>{row.id_segmen}</TableCell>
-                          <TableCell>{row.subsegmen}</TableCell>
+                          <TableCell>{row.segment_id}</TableCell>
+                          <TableCell>{row.subsegment}</TableCell>
                           <TableCell>{row.periode}</TableCell>
-                          <TableCell>{row.fase_tanam}</TableCell>
+                          <TableCell>{row.phase}</TableCell>
                           <TableCell className="text-sm text-slate-600 dark:text-slate-300">
                             {rowHasBlockingError ? (
                               <div className="flex items-start gap-2">

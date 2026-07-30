@@ -15,20 +15,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { supabase } from "@/lib/supabase/client"
 import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext"
 
-interface KecamatanRef {
+interface DistrictRef {
   id: string
-  kode_kecamatan: string
-  nama_kecamatan: string
-}
-
-interface SegmenRef {
-  id: string
-  id_segmen: string
-  kecamatan_id: string
+  district_code: string
+  name: string
 }
 
 interface KsaRow {
-  id_segmen: string
+  segment_id: string
   periode: string
 }
 
@@ -103,7 +97,7 @@ function getCardAccent(
         iconColor: "text-emerald-700 dark:text-emerald-200",
         borderColor: "border-l-emerald-400",
       }
-    case "Kecamatan lengkap": {
+    case "Kecamatan terdata": {
       const [done, total] = (value ?? "").split("/")
       const allComplete = done === total && total !== undefined
       if (allComplete) {
@@ -135,8 +129,7 @@ function getCardAccent(
 }
 
 export default function Dashboard() {
-  const [kecamatanList, setKecamatanList] = React.useState<KecamatanRef[]>([])
-  const [segmenList, setSegmenList] = React.useState<SegmenRef[]>([])
+  const [districtList, setDistrictList] = React.useState<DistrictRef[]>([])
   const [ksaRows, setKsaRows] = React.useState<KsaRow[]>([])
   const [modelVersion, setModelVersion] = React.useState("v1.4.2")
   const [activityLogs, setActivityLogs] = React.useState<ActivityLogRow[]>([])
@@ -144,17 +137,15 @@ export default function Dashboard() {
   const currentPeriode = React.useMemo(() => getCurrentPeriode(), [])
 
   const fetchSummaryData = React.useCallback(async () => {
-    const [{ data: kec }, { data: seg }, { data: ksa }] = await Promise.all([
-      supabase.from("kecamatan").select("id, kode_kecamatan, nama_kecamatan"),
-      supabase.from("segmen").select("id, id_segmen, kecamatan_id"),
+    const [{ data: kec }, { data: ksa }] = await Promise.all([
+      supabase.from("districts").select("id, district_code, name"),
       supabase
-        .from("ksa_segments")
-        .select("id_segmen, periode")
+        .from("data_ksa")
+        .select("segment_id, periode")
         .eq("periode", currentPeriode),
     ])
 
-    setKecamatanList(kec ?? [])
-    setSegmenList(seg ?? [])
+    setDistrictList(kec ?? [])
     setKsaRows(ksa ?? [])
 
     try {
@@ -190,7 +181,7 @@ export default function Dashboard() {
       .channel("dashboard-realtime")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "ksa_segments" },
+        { event: "*", schema: "public", table: "data_ksa" },
         () => {
           fetchSummaryData()
         }
@@ -204,14 +195,7 @@ export default function Dashboard() {
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "segmen" },
-        () => {
-          fetchSummaryData()
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "kecamatan" },
+        { event: "*", schema: "public", table: "districts" },
         () => {
           fetchSummaryData()
         }
@@ -223,34 +207,31 @@ export default function Dashboard() {
     }
   }, [fetchSummaryData, fetchActivityLogs])
 
-  const totalSegmen = segmenList.length
-
-  const observedSegmenSet = React.useMemo(
-    () => new Set(ksaRows.map((row) => row.id_segmen)),
+  const totalSegmen = React.useMemo(
+    () => new Set(ksaRows.map((row) => row.segment_id)).size,
     [ksaRows]
   )
-  const observasiCount = observedSegmenSet.size
 
   const kecamatanProgress = React.useMemo(() => {
-    return kecamatanList
+    const maxCount = Math.max(1, totalSegmen)
+    return districtList
       .map((kec) => {
-        const segmenInKec = segmenList.filter((seg) => seg.kecamatan_id === kec.id)
-        const totalInKec = segmenInKec.length
-        const observedInKec = segmenInKec.filter((seg) =>
-          observedSegmenSet.has(seg.id_segmen)
-        ).length
-        const percent = totalInKec > 0 ? Math.round((observedInKec / totalInKec) * 100) : 0
-        return { name: kec.nama_kecamatan, percent }
+        const inKec = ksaRows.filter((row) =>
+          row.segment_id.startsWith(kec.district_code)
+        )
+        const distinctSegmen = new Set(inKec.map((row) => row.segment_id)).size
+        const percent = Math.round((distinctSegmen / maxCount) * 100)
+        return { name: kec.name, percent }
       })
       .sort((a, b) => b.percent - a.percent)
-  }, [kecamatanList, segmenList, observedSegmenSet])
+  }, [districtList, ksaRows, totalSegmen])
 
   const kecamatanLengkapCount = kecamatanProgress.filter((item) => item.percent === 100).length
 
   const summaryItems = [
     { title: "Total segmen", value: String(totalSegmen), icon: Database },
-    { title: "Observasi bulan berjalan", value: `${observasiCount}/${totalSegmen}`, icon: Upload },
-    { title: "Kecamatan lengkap", value: `${kecamatanLengkapCount}/${kecamatanList.length}`, icon: Layers },
+    { title: "Observasi bulan berjalan", value: String(ksaRows.length), icon: Upload },
+    { title: "Kecamatan terdata", value: `${kecamatanLengkapCount}/${districtList.length}`, icon: Layers },
     { title: "Versi model aktif", value: modelVersion, icon: Settings },
   ]
 

@@ -2,27 +2,24 @@ import { NextResponse } from "next/server"
 
 import { createAdminClient } from "@/lib/supabase/admin"
 
-const VALID_PHASE_CODES = new Set(["1", "2", "3", "4", "5", "6", "7", "8"])
 const ALLOWED_ROLES = new Set(["admin", "superadmin"])
 
 type ImportRow = {
-  id_segmen: string
-  subsegmen: string
+  segment_id: string
+  subsegment: string
   periode: string
-  fase_tanam: string
+  phase: string
 }
 
 function isValidRow(row: ImportRow) {
-  if (!/^\d{9}$/.test(row.id_segmen)) return false
-  if (!VALID_PHASE_CODES.has(row.fase_tanam)) return false
-  if (!row.subsegmen || !row.periode) return false
+  if (!/^\d{9}$/.test(row.segment_id)) return false
+  if (!row.subsegment || !row.periode || !row.phase) return false
   return true
 }
 
 export async function POST(request: Request) {
   const supabaseAdmin = createAdminClient()
 
-  // 1. Ambil token dari header Authorization
   const authHeader = request.headers.get("authorization") ?? ""
   const token = authHeader.replace("Bearer ", "").trim()
 
@@ -30,14 +27,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Token tidak ditemukan. Silakan login ulang." }, { status: 401 })
   }
 
-  // 2. Verifikasi token ke Supabase Auth
   const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token)
 
   if (userError || !userData?.user) {
     return NextResponse.json({ error: "Sesi tidak valid. Silakan login ulang." }, { status: 401 })
   }
 
-  // 3. Cek role dari tabel profiles
   const { data: profile, error: profileError } = await supabaseAdmin
     .from("profiles")
     .select("role")
@@ -50,7 +45,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Anda tidak memiliki akses untuk menyimpan data ini." }, { status: 403 })
   }
 
-  // 4. Parse & validasi body
   let body: { rows?: ImportRow[] }
 
   try {
@@ -73,15 +67,13 @@ export async function POST(request: Request) {
     )
   }
 
-  // 5. Hilangkan duplikat dalam payload sendiri
   const dedupedMap = new Map<string, ImportRow>()
   rows.forEach((row) => {
-    const key = `${row.id_segmen}|${row.subsegmen}|${row.periode}`
+    const key = `${row.segment_id}|${row.subsegment}|${row.periode}`
     dedupedMap.set(key, row)
   })
   const dedupedRows = Array.from(dedupedMap.values())
 
-  // 6. Insert/update pakai service role key (bypass RLS, role sudah dicek manual di atas)
   const { data, error } = await supabaseAdmin
     .from("data_ksa")
     .upsert(
@@ -89,7 +81,7 @@ export async function POST(request: Request) {
         ...row,
         updated_at: new Date().toISOString(),
       })),
-      { onConflict: "id_segmen,subsegmen,periode" }
+      { onConflict: "segment_id,subsegment,periode" }
     )
     .select("id")
 

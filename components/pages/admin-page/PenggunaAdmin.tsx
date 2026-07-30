@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext"
 
@@ -44,7 +44,7 @@ export default function PenggunaAdmin() {
   const isSuperadmin = currentRole === "superadmin"
 
   const [users, setUsers] = React.useState<UserProfile[]>([])
-  const [status, setStatus] = React.useState<FetchStatus>("idle")
+  const setStatus = React.useState<FetchStatus>("idle")[1]
   const [message, setMessage] = React.useState<string>("")
 
   const [isAdding, setIsAdding] = React.useState(false)
@@ -75,7 +75,7 @@ export default function PenggunaAdmin() {
       }
 
       setUsers(
-        data.users.map((item: any) => ({
+        data.users.map((item: Record<string, unknown>) => ({
           id: item.id,
           name: item.name ?? "",
           email: item.email,
@@ -84,7 +84,7 @@ export default function PenggunaAdmin() {
         })),
       )
       setStatus("success")
-    } catch (error) {
+    } catch {
       setUsers(DUMMY_USERS)
       setStatus("error")
       setMessage("Backend belum siap, menampilkan data dummy.")
@@ -152,8 +152,8 @@ export default function PenggunaAdmin() {
       setMessage("Data pengguna berhasil diperbarui.")
       closeEdit()
       fetchUsers()
-    } catch (error: any) {
-      setEditError(error.message || "Terjadi kesalahan saat memperbarui pengguna.")
+    } catch (err: unknown) {
+      setEditError(err instanceof Error ? err.message : "Terjadi kesalahan saat memperbarui pengguna.")
     }
   }
 
@@ -189,8 +189,8 @@ export default function PenggunaAdmin() {
       setMessage("Admin baru berhasil ditambahkan.")
       closeAdd()
       fetchUsers()
-    } catch (error: any) {
-      setFormError(error.message || "Terjadi kesalahan saat menambahkan.")
+    } catch (err: unknown) {
+      setFormError(err instanceof Error ? err.message : "Terjadi kesalahan saat menambahkan.")
     }
   }
 
@@ -210,8 +210,8 @@ export default function PenggunaAdmin() {
       }
       setMessage("Pengguna berhasil dihapus.")
       fetchUsers()
-    } catch (error: any) {
-      setMessage(error.message || "Terjadi kesalahan saat menghapus.")
+    } catch (err: unknown) {
+      setMessage(err instanceof Error ? err.message : "Terjadi kesalahan saat menghapus.")
     }
   }
 

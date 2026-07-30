@@ -34,85 +34,48 @@ import { supabase } from "@/lib/supabase/client"
 import { logActivity } from "@/lib/supabase/activity-log"
 import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext"
 
-const FASE_OPTIONS = [
-  { value: "1", label: "1 - Vegetatif Awal" },
-  { value: "2", label: "2 - Vegetatif Akhir" },
-  { value: "3", label: "3 - Generatif" },
-  { value: "4", label: "4 - Panen" },
-  { value: "5", label: "5 - Persiapan Lahan" },
-  { value: "6", label: "6 - Puso" },
-  { value: "7", label: "7 - Sawah Bukan Padi" },
-  { value: "8", label: "8 - Bukan Sawah" },
-]
+const DEFAULT_FASE_CODE = ""
 
-const DEFAULT_FASE_CODE = FASE_OPTIONS[0].value
-
-interface KecamatanRef {
+interface DistrictRef {
   id: string
-  kode_kecamatan: string
-  nama_kecamatan: string
-}
-
-interface SegmenRef {
-  id: string
-  id_segmen: string
-  kecamatan_id: string
-}
-
-interface SubsegmenRef {
-  id: string
-  segmen_id: string
-  kode_subsegmen: string
+  district_code: string
+  name: string
 }
 
 interface KsaSegmentRow {
   id: string
-  id_segmen: string
-  subsegmen: string
+  segment_id: string
+  subsegment: string
   periode: string
-  fase_tanam: string
+  phase: string
   created_at: string | null
 }
 
 interface TableRowData {
   id: string
-  id_segmen: string
-  kode_subsegmen: string
+  segment_id: string
+  subsegment: string
   nama_kecamatan: string
-  kode_kecamatan: string
   periode: string
-  fase_tanam: string
+  phase: string
   created_at: string | null
-  kecamatan_id: string
-  segmen_id: string
-}
-
-function isValidPhaseCode(fase: string) {
-  const num = Number(fase)
-  if (Number.isNaN(num)) return false
-  return num >= 1 && num < 9
 }
 
 function buildTableRows(
   rows: KsaSegmentRow[],
-  segmenList: SegmenRef[],
-  kecamatanList: KecamatanRef[]
+  districtList: DistrictRef[]
 ): TableRowData[] {
   return rows.map((item) => {
-    const seg = segmenList.find((segmen) => segmen.id_segmen === item.id_segmen)
-    const kec = kecamatanList.find((kecamatan) => kecamatan.id === seg?.kecamatan_id)
+    const kec = districtList.find((k) => item.segment_id.startsWith(k.district_code))
 
     return {
       id: item.id,
-      id_segmen: item.id_segmen,
-      kode_subsegmen: item.subsegmen,
-      nama_kecamatan: kec?.nama_kecamatan ?? "-",
-      kode_kecamatan: kec?.kode_kecamatan ?? "-",
+      segment_id: item.segment_id,
+      subsegment: item.subsegment,
+      nama_kecamatan: kec?.name ?? "-",
       periode: item.periode,
-      fase_tanam: String(item.fase_tanam ?? ""),
+      phase: String(item.phase ?? ""),
       created_at: item.created_at,
-      kecamatan_id: kec?.id ?? "",
-      segmen_id: seg?.id ?? "",
     }
   })
 }
@@ -129,21 +92,11 @@ function formatWaktuImport(value: string | null) {
   }
 }
 
-function Badge({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-700 dark:bg-rose-950/50 dark:text-rose-200">
-      {children}
-    </span>
-  )
-}
-
 export default function KelolaDataKSA() {
   const { id: actorId, name, email } = useAdminAuth()
   const actorName = name || email || "Admin"
 
-  const [kecamatanList, setKecamatanList] = React.useState<KecamatanRef[]>([])
-  const [segmenList, setSegmenList] = React.useState<SegmenRef[]>([])
-  const [subsegmenList, setSubsegmenList] = React.useState<SubsegmenRef[]>([])
+  const [districtList, setDistrictList] = React.useState<DistrictRef[]>([])
 
   const [importRows, setImportRows] = React.useState<KsaSegmentRow[]>([])
   const [isLoading, setIsLoading] = React.useState(false)
@@ -151,7 +104,6 @@ export default function KelolaDataKSA() {
   const [isLiveConnected, setIsLiveConnected] = React.useState(false)
 
   const [filterKecamatan, setFilterKecamatan] = React.useState("")
-  const [filterSegmen, setFilterSegmen] = React.useState("")
   const [filterPeriode, setFilterPeriode] = React.useState("")
   const [searchQuery, setSearchQuery] = React.useState("")
   const [pageSize, setPageSize] = React.useState(10)
@@ -166,9 +118,8 @@ export default function KelolaDataKSA() {
   const [editFase, setEditFase] = React.useState(DEFAULT_FASE_CODE)
   const [editError, setEditError] = React.useState("")
 
-  const [addKecamatan, setAddKecamatan] = React.useState("")
-  const [addSegmen, setAddSegmen] = React.useState("")
-  const [addSubsegmen, setAddSubsegmen] = React.useState("")
+  const [addSegmenValue, setAddSegmenValue] = React.useState("")
+  const [addSubsegmenValue, setAddSubsegmenValue] = React.useState("")
   const [addPeriode, setAddPeriode] = React.useState("")
   const [addFase, setAddFase] = React.useState(DEFAULT_FASE_CODE)
   const [addError, setAddError] = React.useState("")
@@ -176,15 +127,12 @@ export default function KelolaDataKSA() {
   const [notification, setNotification] = React.useState<string>("")
 
   const fetchReferenceData = React.useCallback(async () => {
-    const [{ data: kec }, { data: seg }, { data: sub }] = await Promise.all([
-      supabase.from("kecamatan").select("id, kode_kecamatan, nama_kecamatan").order("kode_kecamatan"),
-      supabase.from("segmen").select("id, id_segmen, kecamatan_id").order("id_segmen"),
-      supabase.from("subsegmen").select("id, segmen_id, kode_subsegmen").order("kode_subsegmen"),
-    ])
+    const { data } = await supabase
+      .from("districts")
+      .select("id, district_code, name")
+      .order("district_code")
 
-    setKecamatanList(kec ?? [])
-    setSegmenList(seg ?? [])
-    setSubsegmenList(sub ?? [])
+    setDistrictList(data ?? [])
   }, [])
 
   const fetchImportedData = React.useCallback(async () => {
@@ -192,8 +140,8 @@ export default function KelolaDataKSA() {
     setLoadError("")
 
     const { data, error } = await supabase
-      .from("ksa_segments")
-      .select("id, id_segmen, subsegmen, periode, fase_tanam, created_at")
+      .from("data_ksa")
+      .select("id, segment_id, subsegment, periode, phase, created_at")
       .order("created_at", { ascending: false })
       .limit(1000)
 
@@ -214,31 +162,17 @@ export default function KelolaDataKSA() {
 
   React.useEffect(() => {
     const channel = supabase
-      .channel("ksa_segments-kelola-data")
+      .channel("data_ksa-kelola-data")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "ksa_segments" },
+        { event: "*", schema: "public", table: "data_ksa" },
         () => {
           fetchImportedData()
         }
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "kecamatan" },
-        () => {
-          fetchReferenceData()
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "segmen" },
-        () => {
-          fetchReferenceData()
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "subsegmen" },
+        { event: "*", schema: "public", table: "districts" },
         () => {
           fetchReferenceData()
         }
@@ -253,8 +187,8 @@ export default function KelolaDataKSA() {
   }, [fetchImportedData, fetchReferenceData])
 
   const tableRows = React.useMemo(
-    () => buildTableRows(importRows, segmenList, kecamatanList),
-    [importRows, segmenList, kecamatanList]
+    () => buildTableRows(importRows, districtList),
+    [importRows, districtList]
   )
 
   const periodeOptions = React.useMemo(
@@ -262,36 +196,29 @@ export default function KelolaDataKSA() {
     [tableRows]
   )
 
-  const segmenOptions = React.useMemo(
-    () =>
-      filterKecamatan
-        ? segmenList.filter((seg) => seg.kecamatan_id === filterKecamatan)
-        : segmenList,
-    [filterKecamatan, segmenList]
-  )
-
   const filteredRows = React.useMemo(() => {
     return tableRows.filter((row) => {
-      const matchesKecamatan = filterKecamatan ? row.kecamatan_id === filterKecamatan : true
-      const matchesSegmen = filterSegmen ? row.segmen_id === filterSegmen : true
+      const matchesKecamatan = filterKecamatan
+        ? row.segment_id.startsWith(filterKecamatan)
+        : true
       const matchesPeriode = filterPeriode ? row.periode === filterPeriode : true
       const matchesSearch = searchQuery
-        ? [row.id_segmen, row.kode_subsegmen]
+        ? [row.segment_id, row.subsegment]
             .join(" ")
             .toLowerCase()
             .includes(searchQuery.toLowerCase())
         : true
 
-      return matchesKecamatan && matchesSegmen && matchesPeriode && matchesSearch
+      return matchesKecamatan && matchesPeriode && matchesSearch
     })
-  }, [filterKecamatan, filterSegmen, filterPeriode, searchQuery, tableRows])
+  }, [filterKecamatan, filterPeriode, searchQuery, tableRows])
 
   const pageCount = Math.max(1, Math.ceil(filteredRows.length / pageSize))
   const pagedRows = filteredRows.slice((page - 1) * pageSize, page * pageSize)
 
   React.useEffect(() => {
     setPage(1)
-  }, [filterKecamatan, filterSegmen, filterPeriode, searchQuery, pageSize])
+  }, [filterKecamatan, filterPeriode, searchQuery, pageSize])
 
   React.useEffect(() => {
     if (!notification) return
@@ -304,12 +231,7 @@ export default function KelolaDataKSA() {
     if (!current) return
     setViewingRowId(rowId)
     setEditPeriode(current.periode)
-
-    setEditFase(
-      FASE_OPTIONS.some((opt) => opt.value === current.fase_tanam)
-        ? current.fase_tanam
-        : DEFAULT_FASE_CODE
-    )
+    setEditFase(current.phase)
     setEditError("")
     setIsEditOpen(true)
   }
@@ -328,8 +250,8 @@ export default function KelolaDataKSA() {
     setEditError("")
 
     const { error } = await supabase
-      .from("ksa_segments")
-      .update({ periode: editPeriode, fase_tanam: editFase })
+      .from("data_ksa")
+      .update({ periode: editPeriode, phase: editFase })
       .eq("id", selectedEditRow.id)
 
     if (error) {
@@ -341,7 +263,7 @@ export default function KelolaDataKSA() {
       actorId,
       actorName,
       actionType: "update_data",
-      description: `Memperbarui data KSA segmen ${selectedEditRow.id_segmen} - ${selectedEditRow.kode_subsegmen} periode ${editPeriode}`,
+      description: `Memperbarui data KSA segmen ${selectedEditRow.segment_id} - ${selectedEditRow.subsegment} periode ${editPeriode}`,
       module: "kelola_data",
     })
 
@@ -355,7 +277,7 @@ export default function KelolaDataKSA() {
 
     const target = tableRows.find((row) => row.id === viewingRowId)
 
-    const { error } = await supabase.from("ksa_segments").delete().eq("id", viewingRowId)
+    const { error } = await supabase.from("data_ksa").delete().eq("id", viewingRowId)
 
     if (error) {
       setNotification(error.message || "Gagal menghapus data")
@@ -367,7 +289,7 @@ export default function KelolaDataKSA() {
       actorId,
       actorName,
       actionType: "delete_data",
-      description: `Menghapus data KSA segmen ${target?.id_segmen ?? ""} - ${target?.kode_subsegmen ?? ""} periode ${target?.periode ?? ""}`,
+      description: `Menghapus data KSA segmen ${target?.segment_id ?? ""} - ${target?.subsegment ?? ""} periode ${target?.periode ?? ""}`,
       module: "kelola_data",
     })
 
@@ -378,59 +300,32 @@ export default function KelolaDataKSA() {
 
   const resetFilters = () => {
     setFilterKecamatan("")
-    setFilterSegmen("")
     setFilterPeriode("")
     setSearchQuery("")
   }
 
-  const availableAddSegmen = React.useMemo(
-    () =>
-      addKecamatan
-        ? segmenList.filter((seg) => seg.kecamatan_id === addKecamatan)
-        : [],
-    [addKecamatan, segmenList]
-  )
-
-  const availableAddSubsegmen = React.useMemo(
-    () =>
-      addSegmen
-        ? subsegmenList.filter((sub) => sub.segmen_id === addSegmen)
-        : [],
-    [addSegmen, subsegmenList]
-  )
-
   const handleOpenAdd = () => {
-    setAddKecamatan("")
-    setAddSegmen("")
-    setAddSubsegmen("")
+    setAddSegmenValue("")
+    setAddSubsegmenValue("")
     setAddPeriode("")
     setAddFase(DEFAULT_FASE_CODE)
     setAddError("")
     setIsAddOpen(true)
   }
 
-  const addSegmenCode = React.useMemo(
-    () => segmenList.find((seg) => seg.id === addSegmen)?.id_segmen ?? "",
-    [addSegmen, segmenList]
-  )
-  const addSubsegmenCode = React.useMemo(
-    () => subsegmenList.find((sub) => sub.id === addSubsegmen)?.kode_subsegmen ?? "",
-    [addSubsegmen, subsegmenList]
-  )
-
   const addDuplicateError = React.useMemo(() => {
-    if (!addSegmenCode || !addSubsegmenCode || !addPeriode) return ""
+    if (!addSegmenValue || !addSubsegmenValue || !addPeriode) return ""
     const exists = importRows.some(
       (item) =>
-        item.id_segmen === addSegmenCode &&
-        item.subsegmen === addSubsegmenCode &&
+        item.segment_id === addSegmenValue &&
+        item.subsegment === addSubsegmenValue &&
         item.periode === addPeriode
     )
     return exists ? "Data untuk subsegmen dan periode ini sudah ada" : ""
-  }, [addSegmenCode, addSubsegmenCode, addPeriode, importRows])
+  }, [addSegmenValue, addSubsegmenValue, addPeriode, importRows])
 
   const handleSaveAdd = async () => {
-    if (!addKecamatan || !addSegmenCode || !addSubsegmenCode || !addPeriode || !addFase) return
+    if (!addSegmenValue || !addSubsegmenValue || !addPeriode || !addFase) return
     if (addDuplicateError) {
       setAddError(addDuplicateError)
       return
@@ -438,11 +333,11 @@ export default function KelolaDataKSA() {
 
     setAddError("")
 
-    const { error } = await supabase.from("ksa_segments").insert({
-      id_segmen: addSegmenCode,
-      subsegmen: addSubsegmenCode,
+    const { error } = await supabase.from("data_ksa").insert({
+      segment_id: addSegmenValue,
+      subsegment: addSubsegmenValue,
       periode: addPeriode,
-      fase_tanam: addFase,
+      phase: addFase,
     })
 
     if (error) {
@@ -454,7 +349,7 @@ export default function KelolaDataKSA() {
       actorId,
       actorName,
       actionType: "add_reference",
-      description: `Menambahkan data KSA manual: segmen ${addSegmenCode} - ${addSubsegmenCode} periode ${addPeriode}`,
+      description: `Menambahkan data KSA manual: segmen ${addSegmenValue} - ${addSubsegmenValue} periode ${addPeriode}`,
       module: "kelola_data",
     })
 
@@ -487,44 +382,21 @@ export default function KelolaDataKSA() {
       <Card className="rounded-xl border shadow-sm">
         <CardHeader className="px-5 pt-5">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between md:gap-6">
-            <div className="grid gap-4 md:grid-cols-4 md:flex-1">
+            <div className="grid gap-4 md:grid-cols-3 md:flex-1">
               <div className="space-y-2">
                 <Label htmlFor="filter-kecamatan">Kecamatan</Label>
                 <Select
                   value={filterKecamatan}
-                  onValueChange={(value) => {
-                    setFilterKecamatan(value)
-                    setFilterSegmen("")
-                  }}
+                  onValueChange={(value) => setFilterKecamatan(value)}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Semua Kecamatan" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Semua Kecamatan</SelectItem>
-                    {kecamatanList.map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.nama_kecamatan}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="filter-segmen">Segmen</Label>
-                <Select
-                  value={filterSegmen}
-                  onValueChange={(value) => setFilterSegmen(value)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Semua Segmen" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Semua Segmen</SelectItem>
-                    {segmenOptions.map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.id_segmen}
+                    {districtList.map((item) => (
+                      <SelectItem key={item.id} value={item.district_code}>
+                        {item.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -559,7 +431,7 @@ export default function KelolaDataKSA() {
                     id="search-query"
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
-                    placeholder="Cari id_segmen atau subsegmen"
+                    placeholder="Cari segment_id atau subsegmen"
                     className="pl-10"
                   />
                 </div>
@@ -643,16 +515,11 @@ export default function KelolaDataKSA() {
                   <TableBody>
                     {pagedRows.map((row) => (
                       <TableRow key={row.id}>
-                        <TableCell className="text-center">{row.id_segmen}</TableCell>
-                        <TableCell className="text-center">{row.kode_subsegmen}</TableCell>
+                        <TableCell className="text-center">{row.segment_id}</TableCell>
+                        <TableCell className="text-center">{row.subsegment}</TableCell>
                         <TableCell className="text-center">{row.nama_kecamatan}</TableCell>
                         <TableCell className="text-center">{row.periode}</TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex flex-wrap items-center justify-center gap-2">
-                            <span>{row.fase_tanam}</span>
-                            {!isValidPhaseCode(row.fase_tanam) ? <Badge>tidak valid</Badge> : null}
-                          </div>
-                        </TableCell>
+                        <TableCell className="text-center">{row.phase}</TableCell>
                         <TableCell className="text-center text-sm text-slate-600 dark:text-slate-300">
                           {formatWaktuImport(row.created_at)}
                         </TableCell>
@@ -747,11 +614,11 @@ export default function KelolaDataKSA() {
                 </div>
                 <div className="space-y-2">
                   <Label>Segmen</Label>
-                  <Input value={selectedEditRow.id_segmen} readOnly />
+                  <Input value={selectedEditRow.segment_id} readOnly />
                 </div>
                 <div className="space-y-2">
                   <Label>Subsegmen</Label>
-                  <Input value={selectedEditRow.kode_subsegmen} readOnly />
+                  <Input value={selectedEditRow.subsegment} readOnly />
                 </div>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
@@ -765,23 +632,11 @@ export default function KelolaDataKSA() {
                 </div>
                 <div className="space-y-2">
                   <Label>Fase Tanam</Label>
-                  <Select value={editFase} onValueChange={(value) => setEditFase(value)}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Pilih kode fase" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {FASE_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {selectedEditRow && !FASE_OPTIONS.some((opt) => opt.value === selectedEditRow.fase_tanam) ? (
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Kode asli data ini: {selectedEditRow.fase_tanam} (sub-kode). Simpan untuk mengganti ke kode utama di atas.
-                    </p>
-                  ) : null}
+                  <Input
+                    value={editFase}
+                    onChange={(event) => setEditFase(event.target.value)}
+                    placeholder="Contoh: 3.1"
+                  />
                 </div>
               </div>
               {editError ? (
@@ -818,61 +673,22 @@ export default function KelolaDataKSA() {
               </Button>
             </div>
             <div className="space-y-4 px-6 py-6">
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Kecamatan</Label>
-                  <Select value={addKecamatan} onValueChange={(value) => {
-                    setAddKecamatan(value)
-                    setAddSegmen("")
-                    setAddSubsegmen("")
-                  }}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Pilih Kecamatan" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Pilih Kecamatan</SelectItem>
-                      {kecamatanList.map((item) => (
-                        <SelectItem key={item.id} value={item.id}>
-                          {item.nama_kecamatan}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Segmen</Label>
-                  <Select value={addSegmen} onValueChange={(value) => {
-                    setAddSegmen(value)
-                    setAddSubsegmen("")
-                  }}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Pilih Segmen" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Pilih Segmen</SelectItem>
-                      {availableAddSegmen.map((item) => (
-                        <SelectItem key={item.id} value={item.id}>
-                          {item.id_segmen}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Segmen (segment_id)</Label>
+                  <Input
+                    value={addSegmenValue}
+                    onChange={(event) => setAddSegmenValue(event.target.value)}
+                    placeholder="Contoh: 3278071"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Subsegmen</Label>
-                  <Select value={addSubsegmen} onValueChange={(value) => setAddSubsegmen(value)}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Pilih Subsegmen" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Pilih Subsegmen</SelectItem>
-                      {availableAddSubsegmen.map((item) => (
-                        <SelectItem key={item.id} value={item.id}>
-                          {item.kode_subsegmen}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Input
+                    value={addSubsegmenValue}
+                    onChange={(event) => setAddSubsegmenValue(event.target.value)}
+                    placeholder="Contoh: A1"
+                  />
                 </div>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
@@ -886,18 +702,11 @@ export default function KelolaDataKSA() {
                 </div>
                 <div className="space-y-2">
                   <Label>Fase Tanam</Label>
-                  <Select value={addFase} onValueChange={(value) => setAddFase(value)}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Pilih kode fase" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {FASE_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Input
+                    value={addFase}
+                    onChange={(event) => setAddFase(event.target.value)}
+                    placeholder="Contoh: 3.1"
+                  />
                 </div>
               </div>
               {addError || addDuplicateError ? (
@@ -912,7 +721,7 @@ export default function KelolaDataKSA() {
               </Button>
               <Button
                 disabled={
-                  !addKecamatan || !addSegmen || !addSubsegmen || !addPeriode || !addFase || !!addDuplicateError
+                  !addSegmenValue || !addSubsegmenValue || !addPeriode || !addFase || !!addDuplicateError
                 }
                 onClick={handleSaveAdd}
               >
@@ -938,8 +747,8 @@ export default function KelolaDataKSA() {
             <div className="space-y-4 px-6 py-6">
               <div className="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-800 dark:bg-slate-950">
                 <p className="text-sm text-slate-600 dark:text-slate-400">Data yang akan dihapus:</p>
-                <p className="mt-2 text-sm text-slate-900 dark:text-slate-100">Segmen: {selectedDeleteRow.id_segmen}</p>
-                <p className="text-sm text-slate-900 dark:text-slate-100">Subsegmen: {selectedDeleteRow.kode_subsegmen}</p>
+                <p className="mt-2 text-sm text-slate-900 dark:text-slate-100">Segmen: {selectedDeleteRow.segment_id}</p>
+                <p className="text-sm text-slate-900 dark:text-slate-100">Subsegmen: {selectedDeleteRow.subsegment}</p>
                 <p className="text-sm text-slate-900 dark:text-slate-100">Periode: {selectedDeleteRow.periode}</p>
               </div>
             </div>

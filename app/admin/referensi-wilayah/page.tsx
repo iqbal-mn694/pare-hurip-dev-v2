@@ -7,7 +7,7 @@ export default function AdminReferensiWilayahPage() {
   return (
     <AdminLayout
       title="Referensi Wilayah"
-      subtitle="Kelola daftar kecamatan, segmen, dan subsegmen wilayah sampel."
+      subtitle="Kelola daftar kecamatan wilayah sampel."
     >
       <ReferensiWilayah />
     </AdminLayout>
