@@ -63,7 +63,7 @@ const TasikCityMap: React.FC<TasikCityMapProps> = ({
     };
 
     return (
-        <MapContainer key={selectedMonth} center={center} zoom={11} style={{ height: '500px', width: '100%', borderRadius: '8px', zIndex: 1 }}>
+        <MapContainer key={selectedMonth} center={center} zoom={11} scrollWheelZoom={false} style={{ height: '500px', width: '100%', borderRadius: '8px', zIndex: 1 }}>
             <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
             {processedKecamatanGeoJSON && (

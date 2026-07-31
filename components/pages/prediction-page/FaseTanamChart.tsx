@@ -171,7 +171,18 @@ export default function FaseTanamChart() {
   const totalBands = readySeries.length;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
+          Prediksi <span className="text-green-600">Fase Tanam</span> per
+          Kecamatan
+        </h2>
+        <p className="mt-4 text-lg text-slate-600 max-w-3xl mx-auto">
+          Bandingkan tren historis dan hasil prediksi fase tanam antar
+          kecamatan yang dipilih.
+        </p>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
       {/* --- Panel Filter --- */}
       <Card className="h-fit">
         <CardHeader>
@@ -508,6 +519,7 @@ export default function FaseTanamChart() {
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

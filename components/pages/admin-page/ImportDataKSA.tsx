@@ -231,7 +231,6 @@ export default function ImportDataKSA() {
   const [savedCount, setSavedCount] = React.useState(0)
   const [isSaving, setIsSaving] = React.useState(false)
   const [saveError, setSaveError] = React.useState<string>("")
-  const [periodeInput, setPeriodeInput] = React.useState("")
 
   const savableRows = validatedRows.filter((row) => row.errors.length === 0 && !row.skip)
   const validRowCount = savableRows.length
@@ -323,10 +322,8 @@ export default function ImportDataKSA() {
     setIsLoading(true)
 
     const fileInfo = extractFileInfo(file.name)
-    const effectivePeriode = periodeInput || (fileInfo.periode ?? "")
-    const effectiveYear = fileInfo.year ?? (periodeInput ? parseInt(periodeInput.split("-")[0]) : undefined)
 
-    parseExcelToRows(file, effectiveYear || undefined, effectivePeriode || undefined).then((parsedRows) => {
+    parseExcelToRows(file, fileInfo.year, fileInfo.periode).then((parsedRows) => {
       const validated = validateRows(parsedRows)
       setValidatedRows(validated)
       setIsLoading(false)
@@ -341,7 +338,6 @@ export default function ImportDataKSA() {
     setValidatedRows([])
     setSavedCount(0)
     setSaveError("")
-    setPeriodeInput("")
   }
 
   const handleSaveToDatabase = async () => {
@@ -465,23 +461,6 @@ export default function ImportDataKSA() {
             </Button>
           </CardHeader>
           <CardContent className="space-y-4 px-5 pb-5">
-            <div className="flex flex-wrap items-end gap-4">
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Tahun / Periode <span className="text-slate-400">(opsional)</span>
-                </label>
-                <input
-                  type="text"
-                  value={periodeInput}
-                  onChange={(e) => setPeriodeInput(e.target.value)}
-                  placeholder="contoh: 2025 atau 2025-06"
-                  className="flex h-10 w-56 rounded-2xl border border-slate-300 bg-white px-4 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                />
-                <p className="text-xs text-slate-400">
-                  Diisi jika file tidak memiliki kolom <code>periode</code>. Terisi otomatis dari nama file jika dikenali.
-                </p>
-              </div>
-            </div>
             <div
               onDragOver={(event) => event.preventDefault()}
               onDrop={handleDrop}

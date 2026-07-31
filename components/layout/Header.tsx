@@ -13,6 +13,11 @@ const Header = () => {
 
   const pathname = usePathname(); 
 
+  const isActive = (path: string) => {
+    if (path === "/#about-ksa") return pathname === "/";
+    return pathname === path;
+  };
+
   const handleNav = () => {
     setNav(!nav);
   };
@@ -61,7 +66,7 @@ const Header = () => {
               style={{ color: `${textColor}` }}
             >
               <h2 className="font-bold">PARE</h2>
-              <h2 className="font-bold">HURIP</h2>
+              <h2 className="font-bold">HURIP 2.0</h2>
             </div>
           </div>
         </Link>
@@ -73,19 +78,37 @@ const Header = () => {
         >
           {/* Menggunakan ID section untuk navigasi di halaman utama */}
           <li className="p-2 hover:text-green-600 transition-colors duration-200">
-            <Link href="/#about-ksa">Beranda</Link>
+            <Link
+              href="/#about-ksa"
+              className={`border-b-2 pb-1 transition-all duration-200 ${
+                isActive("/#about-ksa")
+                  ? "border-green-600"
+                  : "border-transparent"
+              }`}
+            >
+              Beranda
+            </Link>
           </li>
           <li className="p-2 hover:text-green-600 transition-colors duration-200">
-            <Link href="/visualisasi-ksa">Fase Tanam</Link>
+            <Link
+              href="/visualisasi-ksa"
+              className={`border-b-2 pb-1 transition-all duration-200 ${
+                isActive("/visualisasi-ksa")
+                  ? "border-green-600"
+                  : "border-transparent"
+              }`}
+            >
+              Fase Tanam
+            </Link>
           </li>
           <li className="p-2 hover:text-green-600 transition-colors duration-200">
-            <Link href="/compare">Harga Beras</Link>
-          </li>
-          <li className="p-2">
-            <Link href="/prediction">
-                <button className="bg-green-700 text-white font-bold px-4 py-2 rounded-lg hover:bg-green-800 transition-all duration-300">
-                    Coba Sekarang
-                </button>
+            <Link
+              href="/compare"
+              className={`border-b-2 pb-1 transition-all duration-200 ${
+                isActive("/compare") ? "border-green-600" : "border-transparent"
+              }`}
+            >
+              Harga Beras
             </Link>
           </li>
         </ul>
@@ -107,16 +130,40 @@ const Header = () => {
         >
           <ul className="space-y-8 text-center text-2xl font-bold">
             <li onClick={handleNav}>
-              <Link href="/#about-ksa">Beranda</Link>
+              <Link
+                href="/#about-ksa"
+                className={`border-b-2 pb-1 transition-all duration-200 ${
+                  isActive("/#about-ksa")
+                    ? "border-green-400 text-green-400"
+                    : "border-transparent"
+                }`}
+              >
+                Beranda
+              </Link>
             </li>
             <li onClick={handleNav}>
-              <Link href="/visualisasi-ksa">Fase Tanam</Link>
+              <Link
+                href="/visualisasi-ksa"
+                className={`border-b-2 pb-1 transition-all duration-200 ${
+                  isActive("/visualisasi-ksa")
+                    ? "border-green-400 text-green-400"
+                    : "border-transparent"
+                }`}
+              >
+                Fase Tanam
+              </Link>
             </li>
             <li onClick={handleNav}>
-              <Link href="/compare">Harga Beras</Link>
-            </li>
-            <li onClick={handleNav}>
-              <Link href="/prediction">Coba Sekarang</Link>
+              <Link
+                href="/compare"
+                className={`border-b-2 pb-1 transition-all duration-200 ${
+                  isActive("/compare")
+                    ? "border-green-400 text-green-400"
+                    : "border-transparent"
+                }`}
+              >
+                Harga Beras
+              </Link>
             </li>
           </ul>
         </div>
