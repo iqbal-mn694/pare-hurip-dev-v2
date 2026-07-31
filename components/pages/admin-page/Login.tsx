@@ -209,7 +209,7 @@ export default function Login() {
         </Card>
 
         <div className="rounded-xl border border-slate-200 bg-white/80 px-5 py-4 text-sm text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-300">
-          Halaman ini khusus untuk admin BPS Kota Tasikmalaya. Pengunjung umum tidak perlu login, silakan gunakan menu Coba Sekarang di beranda.
+          Halaman ini khusus untuk admin BPS Kota Tasikmalaya. Pengunjung umum tidak perlu login, silakan gunakan menu Fase Tanam di beranda.
         </div>
       </div>
     </div>

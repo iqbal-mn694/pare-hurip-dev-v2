@@ -5,9 +5,6 @@ import React, { useMemo, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import {
   Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
   CardContent,
 } from "@/components/ui/card";
 import {
@@ -18,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Loader2, MapIcon } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase/client";
 import {
@@ -152,17 +149,17 @@ export default function FaseTanamMap() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MapIcon className="h-5 w-5 text-emerald-600" />
-          Peta Sebaran Fase Tanam
-        </CardTitle>
-        <CardDescription>
-          Fase tanam dominan per kecamatan (kiri) dan sebaran per petak sawah
-          (kanan) untuk bulan yang dipilih.
-        </CardDescription>
-      </CardHeader>
+    <>
+      <div className="text-center mb-8">
+        <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
+          Peta <span className="text-green-600">Sebaran</span> Fase Tanam
+        </h2>
+        <p className="mt-4 text-lg text-slate-600 max-w-3xl mx-auto">
+          Lihat sebaran fase tanam dominan per kecamatan dan per petak sawah
+          untuk bulan yang dipilih.
+        </p>
+      </div>
+      <Card>
       <CardContent>
         <div className="flex items-center gap-2 mb-4 max-w-xs">
           <Label htmlFor="map-month">Pilih Bulan</Label>
@@ -180,21 +177,32 @@ export default function FaseTanamMap() {
           </Select>
         </div>
         <div className="grid gap-6 md:grid-cols-2">
-          <TasikCityMapDynamic
-            geoJsonKecamatan={tasikmalayaGeoJson}
-            dataFaseKota={cityWidePhase}
-            phaseColorMapping={getPhaseColor}
-            selectedMonth={selectedMonth}
-          />
-          <KecamatanMapDynamic
-            geoJsonKecamatan={tasikmalayaGeoJson}
-            geoJsonSawah={sawahGeoJson}
-            dataFase={data}
-            selectedMonth={selectedMonth}
-            phaseColorMapping={getPhaseColor}
-          />
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Fase tanam dominan per kecamatan untuk bulan yang dipilih.
+            </p>
+            <TasikCityMapDynamic
+              geoJsonKecamatan={tasikmalayaGeoJson}
+              dataFaseKota={cityWidePhase}
+              phaseColorMapping={getPhaseColor}
+              selectedMonth={selectedMonth}
+            />
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Sebaran per petak sawah untuk bulan yang dipilih.
+            </p>
+            <KecamatanMapDynamic
+              geoJsonKecamatan={tasikmalayaGeoJson}
+              geoJsonSawah={sawahGeoJson}
+              dataFase={data}
+              selectedMonth={selectedMonth}
+              phaseColorMapping={getPhaseColor}
+            />
+          </div>
         </div>
       </CardContent>
-    </Card>
+      </Card>
+    </>
   );
 }

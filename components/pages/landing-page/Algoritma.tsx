@@ -13,14 +13,14 @@ const Algoritma = () => {
   const features = [
     {
       icon: <CpuChipIcon className="w-8 h-8 text-green-600" />,
-      title: 'LSTM',
-      desc: 'Long Short-Term Memory (LSTM) adalah model deep learning yang mampu mengingat pola jangka panjang pada data deret waktu (time-series), digunakan untuk memprediksi harga beras harian dan luas panen bulanan dengan akurasi tinggi hingga 12 bulan ke depan.',
+      title: 'Markov Chain & Random Forest',
+      desc: 'Kombinasi model statistik dan machine learning untuk memprediksi fase tumbuh padi (h+1, h+2, h+3 bulan). Markov Chain menghitung matriks transisi probabilistik antar fase, sementara Random Forest Classifier memanfaatkan fitur fase saat ini, fase sebelumnya, kecamatan, subsegmen, dan bulan dengan encoding sin/cos musiman untuk hasil yang lebih akurat.',
       color: 'from-green-50 to-green-100',
     },
     {
       icon: <ChartBarIcon className="w-8 h-8 text-blue-600" />,
-      title: 'Transformer',
-      desc: 'Transformer adalah model deep learning dengan attention mechanism yang mampu menangkap dependensi jangka panjang dan pola multi-fitur pada data time-series. Teknologi ini memberikan prediksi akurat untuk harga beras dan produksi padi dengan pemahaman konteks yang mendalam.',
+      title: 'LSTM Hybrid & Naive Baseline',
+      desc: 'Model deep learning LSTM yang memprediksi delta harga harian (bukan harga absolut), direkonstruksi menjadi proyeksi 30 hari ke depan, lalu di-blend secara adaptif dengan baseline naive (harga terakhir) berdasarkan volatilitas historis — semakin stabil harga, semakin besar bobot ke baseline; semakin volatil, semakin besar bobot ke LSTM. Hasil prediksi dibatasi (clipped) maksimal ±15% dari harga terakhir sebagai pengaman.',
       color: 'from-blue-50 to-blue-100',
     },
     {
@@ -64,13 +64,14 @@ const Algoritma = () => {
         {/* Heading */}
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
-            Teknologi <span className="text-green-600">Deep Learning</span>{' '}
+            Teknologi <span className="text-green-600">Machine Learning</span>{' '}
             di Balik Prediksi
           </h2>
           <p className="mt-4 text-lg text-slate-600 max-w-3xl mx-auto">
-            Menggabungkan model deep learning LSTM dan Transformer untuk hasil
-            prediksi akurat dan real-time dalam mendukung ketahanan pangan,
-            memberikan wawasan mendalam tentang fase tanam dan harga beras.
+            Menggabungkan model statistik dan machine learning — Markov Chain,
+            Random Forest, dan LSTM Hybrid — untuk hasil prediksi fase tanam
+            dan harga beras yang akurat dan real-time dalam mendukung
+            ketahanan pangan.
           </p>
         </div>
 
