@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   CheckCircle,
   Edit3,
+  Loader2,
   Plus,
   Search,
   Trash2,
@@ -139,20 +140,34 @@ export default function KelolaDataKSA() {
     setIsLoading(true)
     setLoadError("")
 
-    const { data, error } = await supabase
-      .from("data_ksa")
-      .select("id, segment_id, subsegment, periode, phase, created_at")
-      .order("created_at", { ascending: false })
-      .limit(1000)
+    try {
+      // PostgREST memotong respons di 1.000 baris; ambil semua data
+      // bertahap per chunk 1.000 agar seluruh periode bisa difilter/dikelola.
+      const CHUNK = 1000
+      const all: KsaSegmentRow[] = []
+      let from = 0
 
-    if (error) {
-      setLoadError(error.message || "Gagal memuat data observasi KSA.")
+      while (true) {
+        const { data, error } = await supabase
+          .from("data_ksa")
+          .select("id, segment_id, subsegment, periode, phase, created_at")
+          .order("created_at", { ascending: false })
+          .range(from, from + CHUNK - 1)
+
+        if (error) throw new Error(error.message)
+        all.push(...((data as KsaSegmentRow[] | null) ?? []))
+        if (!data || data.length < CHUNK) break
+        from += CHUNK
+      }
+
+      setImportRows(all)
+    } catch (error) {
+      setLoadError(
+        error instanceof Error ? error.message : "Gagal memuat data observasi KSA."
+      )
+    } finally {
       setIsLoading(false)
-      return
     }
-
-    setImportRows(data ?? [])
-    setIsLoading(false)
   }, [])
 
   React.useEffect(() => {
@@ -487,7 +502,11 @@ export default function KelolaDataKSA() {
             </p>
           ) : filteredRows.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-8 py-14 text-center text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
-              <AlertTriangle className="mx-auto mb-3 size-10" />
+              {isLoading ? (
+                <Loader2 className="mx-auto mb-3 size-10 animate-spin text-emerald-600" />
+              ) : (
+                <AlertTriangle className="mx-auto mb-3 size-10" />
+              )}
               <p className="text-lg font-semibold">
                 {isLoading ? "Memuat data..." : "Tidak ada data ditemukan"}
               </p>
