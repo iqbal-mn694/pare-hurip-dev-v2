@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { supabase } from "@/lib/supabase/client";
+import { showRouteTransition } from "@/lib/route-transition";
 import { useRouter } from "next/navigation";
 import { LayoutDashboard, LogOut } from "lucide-react";
 
@@ -15,6 +16,7 @@ export default function HeaderAuthSection({ mobile = false }: { mobile?: boolean
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    showRouteTransition();
     router.push("/");
     router.refresh();
   };
