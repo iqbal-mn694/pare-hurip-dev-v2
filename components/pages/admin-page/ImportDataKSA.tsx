@@ -4,10 +4,12 @@ import { supabase } from "@/lib/supabase/client"
 import { logActivity } from "@/lib/supabase/activity-log"
 import * as React from "react"
 import * as XLSX from "xlsx"
-import { AlertTriangle, CheckCircle, Download, Upload, XCircle } from "lucide-react"
+import { AlertTriangle, Check, CheckCircle, Download, Upload, XCircle } from "lucide-react"
 
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 const MONTH_LABELS = [
@@ -157,7 +159,7 @@ function parseLongFormat(
 }
 
 function parseExcelToRows(file: File, defaultYear?: number, defaultPeriode?: string): Promise<ImportRow[]> {
-  return new Promise(async (resolve) => {
+  return new Promise(async (resolve, reject) => {
     try {
       const arrayBuffer = await file.arrayBuffer()
       const workbook = XLSX.read(arrayBuffer, { type: "array" })
@@ -166,7 +168,7 @@ function parseExcelToRows(file: File, defaultYear?: number, defaultPeriode?: str
       const raw: unknown[][] = XLSX.utils.sheet_to_json(sheet, { defval: "", header: 1 })
 
       if (json.length === 0 || raw.length < 2) {
-        resolve([])
+        reject(new Error("File tidak berisi data baris yang dapat diproses."))
         return
       }
 
@@ -184,7 +186,7 @@ function parseExcelToRows(file: File, defaultYear?: number, defaultPeriode?: str
         )
 
         if (segmenIdx === -1 || subsegIdx === -1) {
-          resolve([])
+          reject(new Error("Kolom 'id segmen' atau 'subsegmen' tidak ditemukan pada format lebar."))
           return
         }
 
@@ -194,8 +196,8 @@ function parseExcelToRows(file: File, defaultYear?: number, defaultPeriode?: str
       }
 
       resolve(rows)
-    } catch {
-      resolve([])
+    } catch (error) {
+      reject(error instanceof Error ? error : new Error("Gagal membaca file Excel."))
     }
   })
 }
@@ -231,11 +233,30 @@ export default function ImportDataKSA() {
   const [savedCount, setSavedCount] = React.useState(0)
   const [isSaving, setIsSaving] = React.useState(false)
   const [saveError, setSaveError] = React.useState<string>("")
+  const [pageSize, setPageSize] = React.useState(10)
+  const [page, setPage] = React.useState(1)
+  const [showOnlyProblems, setShowOnlyProblems] = React.useState(false)
 
   const savableRows = validatedRows.filter((row) => row.errors.length === 0 && !row.skip)
   const validRowCount = savableRows.length
   const invalidRowCount = validatedRows.length - validRowCount
   const autoFixedCount = validatedRows.filter((row) => row.autoFixes.length > 0 && row.errors.length === 0).length
+
+  const problemRows = validatedRows.filter((row) => row.errors.length > 0 || row.skip)
+  const displayedRows = showOnlyProblems ? problemRows : validatedRows
+  const pageCount = Math.max(1, Math.ceil(displayedRows.length / pageSize))
+  const pagedRows = displayedRows.slice((page - 1) * pageSize, page * pageSize)
+
+  const jumpToFirstProblem = () => {
+    const index = displayedRows.findIndex((row) => row.errors.length > 0 || row.skip)
+    if (index >= 0) {
+      setPage(Math.floor(index / pageSize) + 1)
+    }
+  }
+
+  React.useEffect(() => {
+    setPage(1)
+  }, [validatedRows, showOnlyProblems])
 
   function validateRows(rows: ImportRow[]): ValidatedImportRow[] {
     const fixedRows = rows.map((row) => {
@@ -323,12 +344,19 @@ export default function ImportDataKSA() {
 
     const fileInfo = extractFileInfo(file.name)
 
-    parseExcelToRows(file, fileInfo.year, fileInfo.periode).then((parsedRows) => {
-      const validated = validateRows(parsedRows)
-      setValidatedRows(validated)
-      setIsLoading(false)
-      setStage("preview")
-    })
+    parseExcelToRows(file, fileInfo.year, fileInfo.periode).then(
+      (parsedRows) => {
+        const validated = validateRows(parsedRows)
+        setValidatedRows(validated)
+        setIsLoading(false)
+        setStage("preview")
+      },
+      (error: Error) => {
+        setFileError(error.message || "Gagal membaca file Excel.")
+        setIsLoading(false)
+        setStage("upload")
+      }
+    )
   }
 
   const resetUploader = () => {
@@ -416,7 +444,7 @@ export default function ImportDataKSA() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         {stepLabels.map((label, index) => {
           const stepIndex = index + 1
           const activeIndex =
@@ -428,17 +456,44 @@ export default function ImportDataKSA() {
               ? 3
               : 4
           const isActive = stepIndex === activeIndex
+          const isDone = stepIndex < activeIndex
           return (
-            <div
-              key={label}
-              className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                isActive
-                  ? "border-emerald-500 bg-emerald-50 text-emerald-900"
-                  : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300"
-              }`}
-            >
-              {label}
-            </div>
+            <React.Fragment key={label}>
+              {index > 0 ? (
+                <span
+                  className={cn(
+                    "h-px w-6 sm:w-10",
+                    isDone || isActive
+                      ? "bg-emerald-400"
+                      : "bg-slate-200 dark:bg-slate-700"
+                  )}
+                />
+              ) : null}
+              <div className="flex items-center gap-2">
+                <span
+                  className={cn(
+                    "flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors",
+                    isActive
+                      ? "bg-emerald-600 text-white"
+                      : isDone
+                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300"
+                      : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                  )}
+                >
+                  {isDone ? <Check className="size-3.5" /> : stepIndex}
+                </span>
+                <span
+                  className={cn(
+                    "text-xs font-semibold",
+                    isActive
+                      ? "text-emerald-700 dark:text-emerald-300"
+                      : "text-slate-500 dark:text-slate-400"
+                  )}
+                >
+                  {label}
+                </span>
+              </div>
+            </React.Fragment>
           )
         })}
       </div>
@@ -507,24 +562,47 @@ export default function ImportDataKSA() {
               <CardTitle>Hasil Preview & Validasi</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 px-5 pb-5">
-              <div className="flex flex-wrap gap-4">
-                <div className="rounded-3xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-                  <p className="font-semibold">Baris siap disimpan</p>
-                  <p>{validRowCount}</p>
-                </div>
-                {autoFixedCount > 0 && (
-                  <div className="rounded-3xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                    <p className="font-semibold">Otomatis diperbaiki</p>
-                    <p>{autoFixedCount}</p>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex flex-wrap gap-4">
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                    <p className="font-semibold">Baris siap disimpan</p>
+                    <p>{validRowCount}</p>
                   </div>
-                )}
-                <div className="rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
-                  <p className="font-semibold">Dilewati (invalid/duplikat)</p>
-                  <p>{invalidRowCount}</p>
+                  {autoFixedCount > 0 && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                      <p className="font-semibold">Otomatis diperbaiki</p>
+                      <p>{autoFixedCount}</p>
+                    </div>
+                  )}
+                  <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+                    <p className="font-semibold">Dilewati (invalid/duplikat)</p>
+                    <p>{invalidRowCount}</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant={showOnlyProblems ? "default" : "outline"}
+                    size="sm"
+                    disabled={problemRows.length === 0}
+                    onClick={() => setShowOnlyProblems((value) => !value)}
+                  >
+                    <AlertTriangle className="size-3.5" />
+                    Hanya bermasalah ({problemRows.length})
+                  </Button>
+                  {!showOnlyProblems ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={problemRows.length === 0}
+                      onClick={jumpToFirstProblem}
+                    >
+                      Loncat ke baris bermasalah pertama
+                    </Button>
+                  ) : null}
                 </div>
               </div>
 
-              <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-950">
+              <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-950">
                 <Table className="min-w-[720px]">
                   <TableHeader>
                     <TableRow>
@@ -536,12 +614,13 @@ export default function ImportDataKSA() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {validatedRows.map((row, index) => {
+                    {pagedRows.map((row, index) => {
+                      const rowIndex = (page - 1) * pageSize + index
                       const rowHasBlockingError = row.errors.length > 0
                       const rowHasAutoFix = row.autoFixes.length > 0 && !rowHasBlockingError
                       return (
                         <TableRow
-                          key={`${row.segment_id}-${row.subsegment}-${row.periode}-${index}`}
+                          key={`${row.segment_id}-${row.subsegment}-${row.periode}-${rowIndex}`}
                           className={
                             rowHasBlockingError
                               ? "bg-rose-50 dark:bg-rose-950/40"
@@ -574,6 +653,45 @@ export default function ImportDataKSA() {
                     })}
                   </TableBody>
                 </Table>
+              </div>
+
+              <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
+                  <span>Baris per halaman:</span>
+                  <Select value={String(pageSize)} onValueChange={(value) => setPageSize(Number(value))}>
+                    <SelectTrigger className="w-[6.5rem]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[10, 25, 50].map((size) => (
+                        <SelectItem key={size} value={String(size)}>
+                          {size}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                  <span>Halaman</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((value) => Math.max(1, value - 1))}
+                    disabled={page <= 1}
+                  >
+                    Sebelumnya
+                  </Button>
+                  <span>{page} / {pageCount}</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((value) => Math.min(pageCount, value + 1))}
+                    disabled={page >= pageCount}
+                  >
+                    Berikutnya
+                  </Button>
+                </div>
               </div>
 
               {saveError ? (
