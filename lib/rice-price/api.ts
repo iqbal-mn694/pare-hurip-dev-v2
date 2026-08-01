@@ -46,6 +46,11 @@ export const getRiceTypeById = (id: string): RiceTypeOption | undefined =>
 export interface DailyPricePoint {
   date: string;
   price: number;
+  /**
+   * Opsional — hanya diisi bila API prediksi mengirimkannya.
+   * Tidak pernah difabrikasi oleh frontend.
+   */
+  confidence?: number;
 }
 
 export async function fetchRicePriceHistory(
@@ -59,9 +64,39 @@ export async function fetchRicePriceHistory(
     .order("date", { ascending: false })
     .limit(days);
 
-  if (error || !data || data.length === 0) return [];
+  if (error) {
+    throw new Error("Gagal memuat riwayat harga dari database.");
+  }
+
+  if (!data || data.length === 0) return [];
 
   return data.reverse().map((row) => ({
+    date: row.date,
+    price: row.price,
+  }));
+}
+
+/** Ambil riwayat harga harian pada rentang tanggal tertentu (inklusif) */
+export async function fetchRicePriceByRange(
+  riceTypeId: number,
+  fromDate: string,
+  toDate: string
+): Promise<DailyPricePoint[]> {
+  const { data, error } = await supabase
+    .from("rice_prices")
+    .select("date, price")
+    .eq("rice_type_id", riceTypeId)
+    .gte("date", fromDate)
+    .lte("date", toDate)
+    .order("date", { ascending: true });
+
+  if (error) {
+    throw new Error("Gagal memuat riwayat harga dari database.");
+  }
+
+  if (!data) return [];
+
+  return data.map((row) => ({
     date: row.date,
     price: row.price,
   }));
@@ -78,6 +113,8 @@ export interface WeeklyPoint {
   startDate: string;
   endDate: string;
   avgPrice: number;
+  /** Rata-rata keyakinan harian (bila seluruh hari dalam minggu memilikinya) */
+  confidence?: number;
 }
 
 const DATE_FMT = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short" });
@@ -92,6 +129,11 @@ export function aggregateWeekly(daily: DailyPricePoint[], keyPrefix = "w"): Week
     const avg = chunk.reduce((sum, d) => sum + d.price, 0) / chunk.length;
     const start = new Date(chunk[0].date);
     const end = new Date(chunk[chunk.length - 1].date);
+    let confidence: number | undefined;
+    if (chunk.every((d) => typeof d.confidence === "number")) {
+      confidence =
+        chunk.reduce((sum, d) => sum + (d.confidence as number), 0) / chunk.length;
+    }
     weeks.push({
       weekKey: `${keyPrefix}-${weeks.length}`,
       label: `${DATE_FMT.format(start)}`,
@@ -99,6 +141,7 @@ export function aggregateWeekly(daily: DailyPricePoint[], keyPrefix = "w"): Week
       startDate: chunk[0].date,
       endDate: chunk[chunk.length - 1].date,
       avgPrice: Math.round(avg),
+      confidence,
     });
   }
   return weeks;
@@ -125,7 +168,7 @@ export function computeVolatility(values: number[]): number {
  * NEXT_PUBLIC_ dan tidak akan kena CORS.
  */
 export const ML_API_BASE_URL =
-  process.env.ML_API_URL ?? "http://127.0.0.1:8000";
+  process.env.ML_API_URL ?? "http://localhost:8000";
 
 /** Path proxy same-origin di sisi Next.js (lihat app/api/v1/rice-price/predict/batch/route.ts) */
 const PROXY_BATCH_PATH = "/api/v1/rice-price/predict/batch";
@@ -133,6 +176,8 @@ const PROXY_BATCH_PATH = "/api/v1/rice-price/predict/batch";
 export interface PricePredictionPoint {
   target_date: string;
   predicted_price: number;
+  /** Opsional — hanya diisi bila API prediksi mengirimkannya (defensif, tidak difabrikasi) */
+  confidence?: number;
 }
 
 export interface RicePricePredictionResult {
@@ -158,16 +203,30 @@ interface PredictBatchResponse {
   results: RicePricePredictionResult[];
 }
 
+/** Cache hasil prediksi per (rice_type, tanggal data terakhir).
+ *  Invalisi otomatis saat tanggal data terakhir berubah (data baru masuk). */
+const pricePredictionCache = new Map<string, RicePricePredictionResult>();
+const PRICE_PREDICTION_CACHE_MAX = 200;
+
 /**
  * Ambil prediksi untuk satu atau lebih jenis beras. Selalu lewat endpoint
  * batch (walau cuma 1 item) — endpoint single non-batch tidak dipakai lagi
  * karena pemanggil (RicePricePredictionChart) selalu mengirim seluruh
  * RICE_TYPES sekaligus dalam satu request.
+ * Hasil di-cache per (rice_type, last_price_date) sehingga kunjungan ulang
+ * dengan data yang sama tidak memanggil service ML lagi.
  */
 export async function predictRicePrices(
   items: PredictSingleRequest[]
 ): Promise<RicePricePredictionResult[]> {
   if (items.length === 0) return [];
+
+  const keys = items.map((item) => `${item.rice_type}|${item.last_price_date}`);
+
+  // Semua item ter-cache -> langsung kembalikan hasil sesuai urutan request.
+  if (keys.every((key) => pricePredictionCache.has(key))) {
+    return keys.map((key) => pricePredictionCache.get(key)!);
+  }
 
   const body: PredictBatchRequest = { items };
   const res = await fetch(PROXY_BATCH_PATH, {
@@ -181,5 +240,15 @@ export async function predictRicePrices(
   }
 
   const data = (await res.json()) as PredictBatchResponse;
-  return data.results ?? [];
+  const results = data.results ?? [];
+
+  if (pricePredictionCache.size >= PRICE_PREDICTION_CACHE_MAX) {
+    pricePredictionCache.clear();
+  }
+  results.forEach((r, idx) => {
+    // Simpan dengan key yang sama dengan lookup (dari item request).
+    pricePredictionCache.set(keys[idx] ?? `${r.rice_type}|${r.last_known_date}`, r);
+  });
+
+  return results;
 }
