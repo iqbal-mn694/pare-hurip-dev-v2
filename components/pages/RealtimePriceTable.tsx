@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import {
   Table, TableHeader, TableRow, TableHead, TableBody, TableCell,
 } from "@/components/ui/table";
-import { Wifi } from "lucide-react";
+import { Wifi, AlertCircle } from "lucide-react";
 
 type RicePrice = {
   id: string;
@@ -18,18 +18,31 @@ type RicePrice = {
 export default function RealtimePriceTable() {
   const [rows, setRows] = useState<RicePrice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
     // 1. Ambil data awal
-    supabase
-      .from("rice_prices")
-      .select("id, tanggal, harga_medium, harga_premium")
-      .order("tanggal", { ascending: false })
-      .limit(30)
-      .then(({ data }) => {
+    async function loadInitial() {
+      try {
+        const { data } = await supabase
+          .from("rice_prices")
+          .select("id, tanggal, harga_medium, harga_premium")
+          .order("tanggal", { ascending: false })
+          .limit(30);
+        if (cancelled) return;
         setRows(data || []);
-        setLoading(false);
-      });
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Gagal memuat data harga terbaru.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    void loadInitial();
 
     // 2. Dengarkan perubahan real-time (insert/update/delete oleh admin)
     const channel = supabase
@@ -53,6 +66,7 @@ export default function RealtimePriceTable() {
       .subscribe();
 
     return () => {
+      cancelled = true;
       supabase.removeChannel(channel);
     };
   }, []);
@@ -67,8 +81,20 @@ export default function RealtimePriceTable() {
         <CardDescription>Update otomatis begitu admin menambahkan data baru.</CardDescription>
       </CardHeader>
       <CardContent>
-        {loading ? (
+        {error ? (
+          <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300">
+            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <div>
+              <p className="font-medium">Gagal memuat data harga terbaru</p>
+              <p className="mt-0.5 text-red-600/90 dark:text-red-400/90">
+                {error} Muat ulang halaman untuk mencoba lagi.
+              </p>
+            </div>
+          </div>
+        ) : loading ? (
           <p className="text-sm text-gray-500">Memuat data...</p>
+        ) : rows.length === 0 ? (
+          <p className="text-sm text-gray-500">Belum ada data harga beras.</p>
         ) : (
           <Table>
             <TableHeader>
