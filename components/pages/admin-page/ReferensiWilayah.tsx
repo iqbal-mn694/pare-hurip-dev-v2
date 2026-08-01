@@ -1,12 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { AlertTriangle, Edit3, Plus, Trash2, X } from "lucide-react"
+import { Edit3, Plus, Trash2, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { TableLoading } from "@/components/ui/table-loading"
 import {
   Table,
   TableBody,
@@ -30,7 +32,7 @@ export default function ReferensiWilayah() {
   const actorName = name || email || "Admin"
 
   const [kecamatanData, setKecamatanData] = React.useState<Kecamatan[]>([])
-  const setIsLoading = React.useState(false)[1]
+  const [isLoading, setIsLoading] = React.useState(false)
   const [loadError, setLoadError] = React.useState("")
 
   const [modalOpen, setModalOpen] = React.useState(false)
@@ -40,7 +42,7 @@ export default function ReferensiWilayah() {
   const [formError, setFormError] = React.useState("")
 
   const [deleteModalOpen, setDeleteModalOpen] = React.useState(false)
-  const [deleteTarget, setDeleteTarget] = React.useState<{ id: string } | null>(null)
+  const [deleteTarget, setDeleteTarget] = React.useState<{ id: string; name: string } | null>(null)
 
   const fetchData = React.useCallback(async () => {
     setIsLoading(true)
@@ -154,8 +156,8 @@ export default function ReferensiWilayah() {
     fetchData()
   }
 
-  const openDeleteModal = (id: string) => {
-    setDeleteTarget({ id })
+  const openDeleteModal = (item: Kecamatan) => {
+    setDeleteTarget({ id: item.id, name: item.name })
     setDeleteModalOpen(true)
   }
 
@@ -207,42 +209,56 @@ export default function ReferensiWilayah() {
             <Plus className="size-4" /> Tambah Kecamatan
           </Button>
         </CardHeader>
-        <CardContent className="overflow-x-auto px-0">
-          <Table className="min-w-full">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Kode Kecamatan</TableHead>
-                <TableHead>Nama Kecamatan</TableHead>
-                <TableHead>Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {kecamatanData.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>{item.district_code}</TableCell>
-                  <TableCell>{item.name}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => openEdit(item.id)}
-                      >
-                        <Edit3 className="size-4" />
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => openDeleteModal(item.id)}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table className="min-w-full">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Kode Kecamatan</TableHead>
+                  <TableHead>Nama Kecamatan</TableHead>
+                  <TableHead>Aksi</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableLoading colSpan={3} />
+                ) : kecamatanData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center">
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                        Belum ada kecamatan terdaftar.
+                      </p>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  kecamatanData.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{item.district_code}</TableCell>
+                      <TableCell>{item.name}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => openEdit(item.id)}
+                          >
+                            <Edit3 className="size-4" />
+                          </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => openDeleteModal(item)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
@@ -297,39 +313,17 @@ export default function ReferensiWilayah() {
         </div>
       ) : null}
 
-      {deleteModalOpen && deleteTarget ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
-          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                  Konfirmasi Hapus
-                </h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Hapus data secara permanen dari daftar.
-                </p>
-              </div>
-              <Button variant="ghost" size="icon" onClick={() => setDeleteModalOpen(false)}>
-                <X className="size-4" />
-              </Button>
-            </div>
-            <div className="space-y-4 rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
-              <div className="flex items-center gap-3 text-amber-800 dark:text-amber-200">
-                <AlertTriangle className="size-5" />
-                <p>Yakin ingin menghapus kecamatan ini?</p>
-              </div>
-            </div>
-            <div className="mt-6 flex justify-end gap-3">
-              <Button variant="secondary" onClick={() => setDeleteModalOpen(false)}>
-                Batal
-              </Button>
-              <Button variant="destructive" onClick={handleConfirmDelete}>
-                Hapus
-              </Button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <ConfirmDialog
+        open={deleteModalOpen && deleteTarget !== null}
+        title="Konfirmasi Hapus"
+        description={
+          deleteTarget
+            ? `Yakin ingin menghapus kecamatan ${deleteTarget.name}? Tindakan ini tidak dapat dibatalkan.`
+            : ""
+        }
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteModalOpen(false)}
+      />
     </div>
   )
 }
