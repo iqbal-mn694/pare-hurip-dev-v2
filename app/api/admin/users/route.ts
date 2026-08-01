@@ -1,33 +1,48 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isStrongPassword } from "@/lib/password";
+import { isValidEmail } from "@/lib/email";
 
 async function requireSuperAdmin() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    return { error: NextResponse.json({ error: "Belum login." }, { status: 401 }) };
+    return { error: NextResponse.json({ error: "Belum login." }, { status: 401 }), actor: null };
   }
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, name")
     .eq("id", user.id)
     .single();
 
   if (profile?.role !== "superadmin") {
-    return { error: NextResponse.json({ error: "Hanya superadmin yang boleh mengakses ini." }, { status: 403 }) };
+    return { error: NextResponse.json({ error: "Hanya superadmin yang boleh mengakses ini." }, { status: 403 }), actor: null };
   }
 
-  return { error: null };
+  return { error: null, actor: { id: user.id, name: profile?.name ?? "" } };
+}
+
+async function logAdminActivity(
+  actor: { id: string; name: string },
+  actionType: string,
+  description: string
+) {
+  const admin = createAdminClient();
+  await admin.from("activity_log").insert({
+    actor_id: actor.id,
+    actor_name: actor.name || "Superadmin",
+    action_type: actionType,
+    description,
+    module: "pengguna_admin",
+  });
 }
 
 export async function GET() {
   const { error } = await requireSuperAdmin();
-  if (error) return error;
-
-  const admin = createAdminClient();
+  if (error) return error;  const admin = createAdminClient();
   const { data, error: fetchError } = await admin
     .from("profiles")
     .select("id, name, email, role, created_at")
@@ -42,16 +57,23 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const { error } = await requireSuperAdmin();
+  const { error, actor } = await requireSuperAdmin();
   if (error) return error;
+  if (!actor) return NextResponse.json({ error: "Akun tidak ditemukan." }, { status: 401 });
 
   const { name, email, password, role } = await request.json();
 
   if (!name || !email || !password) {
     return NextResponse.json({ error: "Nama, email, dan password wajib diisi." }, { status: 400 });
   }
-  if (password.length < 6) {
-    return NextResponse.json({ error: "Password minimal 6 karakter." }, { status: 400 });
+  if (!isValidEmail(email)) {
+    return NextResponse.json({ error: "Format email tidak valid." }, { status: 400 });
+  }
+  if (!isStrongPassword(password)) {
+    return NextResponse.json(
+      { error: "Password minimal 8 karakter dengan kombinasi huruf besar, huruf kecil, angka, dan karakter khusus." },
+      { status: 400 }
+    );
   }
 
   const admin = createAdminClient();
@@ -79,22 +101,37 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: profileError.message }, { status: 500 });
   }
 
+  await logAdminActivity(actor, "add_admin", `Menambahkan admin ${name} (${email})`);
+
   return NextResponse.json({ success: true });
 }
 
 export async function PATCH(request: Request) {
-  const { error } = await requireSuperAdmin();
+  const { error, actor } = await requireSuperAdmin();
   if (error) return error;
+  if (!actor) return NextResponse.json({ error: "Akun tidak ditemukan." }, { status: 401 });
 
-  const { userId, name, email } = await request.json();
+  const { userId, name, email, password } = await request.json();
 
   if (!userId || !email) {
     return NextResponse.json({ error: "userId dan email wajib diisi." }, { status: 400 });
   }
+  if (!isValidEmail(email)) {
+    return NextResponse.json({ error: "Format email tidak valid." }, { status: 400 });
+  }
+  if (password && !isStrongPassword(password)) {
+    return NextResponse.json(
+      { error: "Password minimal 8 karakter dengan kombinasi huruf besar, huruf kecil, angka, dan karakter khusus." },
+      { status: 400 }
+    );
+  }
 
   const admin = createAdminClient();
 
-  const { error: authUpdateError } = await admin.auth.admin.updateUserById(userId, { email });
+  const { error: authUpdateError } = await admin.auth.admin.updateUserById(userId, {
+    email,
+    ...(password ? { password } : {}),
+  });
   if (authUpdateError) {
     return NextResponse.json({ error: authUpdateError.message }, { status: 400 });
   }
@@ -108,12 +145,15 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: profileError.message }, { status: 500 });
   }
 
+  await logAdminActivity(actor, "update_admin", `Mengubah admin ${name} (${email})`);
+
   return NextResponse.json({ success: true });
 }
 
 export async function DELETE(request: Request) {
-  const { error } = await requireSuperAdmin();
+  const { error, actor } = await requireSuperAdmin();
   if (error) return error;
+  if (!actor) return NextResponse.json({ error: "Akun tidak ditemukan." }, { status: 401 });
 
   const { id } = await request.json();
   if (!id) {
@@ -122,12 +162,24 @@ export async function DELETE(request: Request) {
 
   const admin = createAdminClient();
 
+  const { data: target } = await admin
+    .from("profiles")
+    .select("name, email")
+    .eq("id", id)
+    .single();
+
   const { error: deleteError } = await admin.auth.admin.deleteUser(id);
   if (deleteError) {
     return NextResponse.json({ error: deleteError.message }, { status: 500 });
   }
 
   await admin.from("profiles").delete().eq("id", id);
+
+  await logAdminActivity(
+    actor,
+    "delete_admin",
+    `Menghapus admin ${target?.name ?? ""} (${target?.email ?? id})`
+  );
 
   return NextResponse.json({ success: true });
 }

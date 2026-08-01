@@ -7,6 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { PasswordInput } from "@/components/ui/password-input"
+import { EmailInput } from "@/components/ui/email-input"
+import { TableLoading } from "@/components/ui/table-loading"
+import { getPasswordFeedback, isStrongPassword } from "@/lib/password"
+import { getEmailFeedback, isValidEmail } from "@/lib/email"
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext"
@@ -20,14 +26,6 @@ type UserProfile = {
 }
 
 type FetchStatus = "idle" | "loading" | "success" | "error"
-
-const DUMMY_USERS: UserProfile[] = [
-  { id: "user-1", name: "Admin Satu", email: "admin1@example.com", role: "admin", created_at: "2025-05-10T09:41:00Z" },
-  { id: "user-2", name: "Admin Dua", email: "admin2@example.com", role: "admin", created_at: "2025-06-12T14:27:00Z" },
-  { id: "user-3", name: "Super Admin", email: "superadmin@example.com", role: "superadmin", created_at: "2025-04-05T08:12:00Z" },
-  { id: "user-4", name: "Admin Tiga", email: "admin3@example.com", role: "admin", created_at: "2025-07-01T11:07:00Z" },
-  { id: "user-5", name: "Supervisor", email: "supervisor@example.com", role: "superadmin", created_at: "2025-03-22T16:35:00Z" },
-]
 
 function formatDate(dateString: string) {
   return new Date(dateString).toLocaleDateString("id-ID", {
@@ -44,20 +42,30 @@ export default function PenggunaAdmin() {
   const isSuperadmin = currentRole === "superadmin"
 
   const [users, setUsers] = React.useState<UserProfile[]>([])
-  const setStatus = React.useState<FetchStatus>("idle")[1]
+  const [status, setStatus] = React.useState<FetchStatus>("idle")
   const [message, setMessage] = React.useState<string>("")
 
   const [isAdding, setIsAdding] = React.useState(false)
   const [newName, setNewName] = React.useState("")
   const [newEmail, setNewEmail] = React.useState("")
   const [newPassword, setNewPassword] = React.useState("")
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [formError, setFormError] = React.useState("")
 
   const [isEditing, setIsEditing] = React.useState(false)
   const [editingUserId, setEditingUserId] = React.useState<string | null>(null)
   const [editingUserName, setEditingUserName] = React.useState<string>("")
   const [editingUserEmail, setEditingUserEmail] = React.useState<string>("")
+  const [editingPassword, setEditingPassword] = React.useState("")
+  const [isSubmittingEdit, setIsSubmittingEdit] = React.useState(false)
   const [editError, setEditError] = React.useState("")
+
+  const [deletingUser, setDeletingUser] = React.useState<UserProfile | null>(null)
+  const [isDeleting, setIsDeleting] = React.useState(false)
+
+  const newPasswordFeedback = getPasswordFeedback(newPassword)
+  const editingPasswordFeedback = getPasswordFeedback(editingPassword)
+  const newEmailFeedback = getEmailFeedback(newEmail.trim())
 
   const fetchUsers = React.useCallback(async () => {
     setStatus("loading")
@@ -67,15 +75,9 @@ export default function PenggunaAdmin() {
         throw new Error("Tidak dapat memuat daftar pengguna.")
       }
       const data = await response.json()
-      if (!data?.users?.length) {
-        // TODO: Fallback sementara ke data dummy bila backend belum siap atau mengembalikan kosong.
-        setUsers(DUMMY_USERS)
-        setStatus("success")
-        return
-      }
 
       setUsers(
-        data.users.map((item: Record<string, unknown>) => ({
+        (data?.users ?? []).map((item: Record<string, unknown>) => ({
           id: item.id,
           name: item.name ?? "",
           email: item.email,
@@ -85,9 +87,8 @@ export default function PenggunaAdmin() {
       )
       setStatus("success")
     } catch {
-      setUsers(DUMMY_USERS)
+      setUsers([])
       setStatus("error")
-      setMessage("Backend belum siap, menampilkan data dummy.")
     }
   }, [])
 
@@ -100,10 +101,6 @@ export default function PenggunaAdmin() {
     const handle = window.setTimeout(() => setMessage(""), 3000)
     return () => window.clearTimeout(handle)
   }, [message])
-
-  const validateEmail = (value: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
-  }
 
   const openAdd = () => {
     setNewName("")
@@ -122,6 +119,7 @@ export default function PenggunaAdmin() {
     setEditingUserId(user.id)
     setEditingUserName(user.name ?? "")
     setEditingUserEmail(user.email)
+    setEditingPassword("")
     setEditError("")
     setIsEditing(true)
   }
@@ -129,21 +127,29 @@ export default function PenggunaAdmin() {
   const closeEdit = () => {
     setIsEditing(false)
     setEditingUserId(null)
+    setEditingPassword("")
     setEditError("")
   }
 
   const handleEditSave = async () => {
-    if (!editingUserId) return
-    if (!editingUserEmail || !validateEmail(editingUserEmail.trim())) {
-      setEditError("Email tidak valid.")
+    if (!editingUserId || isSubmittingEdit) return
+    if (editingPassword && !isStrongPassword(editingPassword)) {
+      setEditError("Password belum kuat. Periksa kembali ketentuannya.")
       return
     }
 
+    setIsSubmittingEdit(true)
+    setEditError("")
     try {
       const response = await fetch("/api/admin/users", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: editingUserId, name: editingUserName.trim(), email: editingUserEmail.trim() }),
+        body: JSON.stringify({
+          userId: editingUserId,
+          name: editingUserName.trim(),
+          email: editingUserEmail.trim(),
+          password: editingPassword.trim() || undefined,
+        }),
       })
       const data = await response.json()
       if (!response.ok) {
@@ -154,15 +160,18 @@ export default function PenggunaAdmin() {
       fetchUsers()
     } catch (err: unknown) {
       setEditError(err instanceof Error ? err.message : "Terjadi kesalahan saat memperbarui pengguna.")
+    } finally {
+      setIsSubmittingEdit(false)
     }
   }
 
   const handleSave = async () => {
+    if (isSubmitting) return
     if (!newName.trim()) {
       setFormError("Nama harus diisi.")
       return
     }
-    if (!validateEmail(newEmail.trim())) {
+    if (!isValidEmail(newEmail.trim())) {
       setFormError("Email tidak valid.")
       return
     }
@@ -170,11 +179,13 @@ export default function PenggunaAdmin() {
       setFormError("Password harus diisi.")
       return
     }
-    if (newPassword.length < 6) {
-      setFormError("Password minimal 6 karakter.")
+    if (!isStrongPassword(newPassword)) {
+      setFormError("Password belum kuat. Periksa kembali ketentuannya.")
       return
     }
 
+    setIsSubmitting(true)
+    setFormError("")
     try {
       // Default role for created users via UI is 'admin' (form no longer exposes role)
       const response = await fetch("/api/admin/users", {
@@ -191,27 +202,36 @@ export default function PenggunaAdmin() {
       fetchUsers()
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : "Terjadi kesalahan saat menambahkan.")
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Yakin ingin menghapus pengguna ini?")) {
-      return
-    }
+  const handleDelete = (user: UserProfile) => {
+    setDeletingUser(user)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deletingUser || isDeleting) return
+    setIsDeleting(true)
     try {
       const response = await fetch("/api/admin/users", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id: deletingUser.id }),
       })
       const data = await response.json()
       if (!response.ok) {
         throw new Error(data?.error || "Gagal menghapus pengguna.")
       }
       setMessage("Pengguna berhasil dihapus.")
+      setDeletingUser(null)
       fetchUsers()
     } catch (err: unknown) {
+      setDeletingUser(null)
       setMessage(err instanceof Error ? err.message : "Terjadi kesalahan saat menghapus.")
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -259,29 +279,50 @@ export default function PenggunaAdmin() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{user.name ?? ""}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{user.email}</p>
+                {status === "loading" ? (
+                  <TableLoading colSpan={isSuperadmin ? 3 : 2} />
+                ) : users.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={isSuperadmin ? 3 : 2} className="h-24 text-center">
+                      <div className="flex flex-col items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                        <span>
+                          {status === "error"
+                            ? "Tidak dapat memuat data pengguna."
+                            : "Belum ada pengguna terdaftar."}
+                        </span>
+                        {status === "error" ? (
+                          <Button variant="outline" size="sm" onClick={fetchUsers}>
+                            Coba Lagi
+                          </Button>
+                        ) : null}
                       </div>
                     </TableCell>
-                    <TableCell>{formatDate(user.created_at)}</TableCell>
-                    {isSuperadmin ? (
+                  </TableRow>
+                ) : (
+                  users.map((user) => (
+                    <TableRow key={user.id}>
                       <TableCell>
-                        <div className="flex flex-wrap gap-2">
-                          <Button variant="secondary" size="sm" onClick={() => openEdit(user)}>
-                            <UserCheck className="size-4" />
-                          </Button>
-                          <Button variant="destructive" size="sm" onClick={() => handleDelete(user.id)}>
-                            <Trash2 className="size-4" />
-                          </Button>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{user.name ?? ""}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">{user.email}</p>
                         </div>
                       </TableCell>
-                    ) : null}
-                  </TableRow>
-                ))}
+                      <TableCell>{formatDate(user.created_at)}</TableCell>
+                      {isSuperadmin ? (
+                        <TableCell>
+                          <div className="flex flex-wrap gap-2">
+                            <Button variant="secondary" size="sm" onClick={() => openEdit(user)}>
+                              <UserCheck className="size-4" />
+                            </Button>
+                            <Button variant="destructive" size="sm" onClick={() => handleDelete(user)}>
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      ) : null}
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
@@ -314,7 +355,18 @@ export default function PenggunaAdmin() {
               </div>
               <div>
                 <Label htmlFor="new-admin-email">Email</Label>
-                <Input
+                {newEmailFeedback ? (
+                  <p
+                    className={
+                      newEmailFeedback.valid
+                        ? "mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-400"
+                        : "mt-1 text-xs font-medium text-amber-600 dark:text-amber-400"
+                    }
+                  >
+                    {newEmailFeedback.message}
+                  </p>
+                ) : null}
+                <EmailInput
                   id="new-admin-email"
                   value={newEmail}
                   onChange={(event) => setNewEmail(event.target.value)}
@@ -323,19 +375,31 @@ export default function PenggunaAdmin() {
               </div>
               <div>
                 <Label htmlFor="new-admin-password">Password</Label>
-                <Input
+                {newPasswordFeedback ? (
+                  <p
+                    className={
+                      newPasswordFeedback.strong
+                        ? "mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-400"
+                        : "mt-1 text-xs font-medium text-amber-600 dark:text-amber-400"
+                    }
+                  >
+                    {newPasswordFeedback.message}
+                  </p>
+                ) : null}
+                <PasswordInput
                   id="new-admin-password"
-                  type="password"
                   value={newPassword}
                   onChange={(event) => setNewPassword(event.target.value)}
-                  placeholder="Minimal 6 karakter"
+                  placeholder="Minimal 8 karakter"
                 />
               </div>
               {formError ? <p className="text-sm text-rose-600">{formError}</p> : null}
             </div>
             <div className="mt-6 flex justify-end gap-3">
-              <Button variant="secondary" onClick={closeAdd}>Batal</Button>
-              <Button className="bg-[#639922] hover:bg-[#58751d]" onClick={handleSave}>Simpan</Button>
+              <Button variant="secondary" onClick={closeAdd} disabled={isSubmitting}>Batal</Button>
+              <Button className="bg-[#639922] hover:bg-[#58751d]" onClick={handleSave} disabled={isSubmitting}>
+                {isSubmitting ? "Menyimpan..." : "Simpan"}
+              </Button>
             </div>
           </div>
         </div>
@@ -348,7 +412,7 @@ export default function PenggunaAdmin() {
               <div>
                 <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Ubah Pengguna</h2>
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Perbarui nama atau email pengguna.
+                  Perbarui nama, email, atau password pengguna.
                 </p>
               </div>
               <Button variant="ghost" size="icon" onClick={closeEdit}>
@@ -372,17 +436,59 @@ export default function PenggunaAdmin() {
                   value={editingUserEmail}
                   onChange={(e) => setEditingUserEmail(e.target.value)}
                   placeholder="admin@example.com"
+                  disabled
                 />
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Email tidak dapat diubah.
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="edit-admin-password">Password Baru (opsional)</Label>
+                {editingPasswordFeedback ? (
+                  <p
+                    className={
+                      editingPasswordFeedback.strong
+                        ? "mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-400"
+                        : "mt-1 text-xs font-medium text-amber-600 dark:text-amber-400"
+                    }
+                  >
+                    {editingPasswordFeedback.message}
+                  </p>
+                ) : null}
+                <PasswordInput
+                  id="edit-admin-password"
+                  value={editingPassword}
+                  onChange={(e) => setEditingPassword(e.target.value)}
+                  placeholder="Minimal 8 karakter"
+                />
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Kosongkan jika tidak ingin mengubah password.
+                </p>
               </div>
               {editError ? <p className="text-sm text-rose-600">{editError}</p> : null}
             </div>
             <div className="mt-6 flex justify-end gap-3">
-              <Button variant="secondary" onClick={closeEdit}>Batal</Button>
-              <Button className="bg-[#639922] hover:bg-[#58751d]" onClick={handleEditSave}>Simpan</Button>
+              <Button variant="secondary" onClick={closeEdit} disabled={isSubmittingEdit}>Batal</Button>
+              <Button className="bg-[#639922] hover:bg-[#58751d]" onClick={handleEditSave} disabled={isSubmittingEdit}>
+                {isSubmittingEdit ? "Menyimpan..." : "Simpan"}
+              </Button>
             </div>
           </div>
         </div>
       ) : null}
+
+      <ConfirmDialog
+        open={deletingUser !== null}
+        title="Hapus Pengguna"
+        description={
+          deletingUser
+            ? `Yakin ingin menghapus pengguna ${deletingUser.name || deletingUser.email}? Tindakan ini tidak dapat dibatalkan.`
+            : ""
+        }
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeletingUser(null)}
+        confirmDisabled={isDeleting}
+      />
     </div>
   )
 }

@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase/client"
 
-export type ActivityModule = "import_data" | "kelola_data" | "referensi_wilayah" | "model_prediksi"
+export type ActivityModule = "import_data" | "kelola_data" | "referensi_wilayah" | "model_prediksi" | "pengguna_admin"
 
 interface LogActivityParams {
   actorId: string | null
