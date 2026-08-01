@@ -1,6 +1,7 @@
 "use client";
 
 import RicePricePredictionChart from '@/components/pages/compare-page/RicePricePredictionChart';
+import RicePriceHistoryTable from '@/components/pages/compare-page/RicePriceHistoryTable';
 
 export default function Page() {
   return (
@@ -11,13 +12,14 @@ export default function Page() {
           Prediksi &amp; Tren <span className="text-green-600">Harga Beras</span>
         </h1>
         <p className="mt-4 text-base md:text-lg text-slate-600 dark:text-slate-300 max-w-2xl">
-          Pantau grafik perkembangan dan prediksi harga beras mingguan di Kabupaten Tasikmalaya berbasis Machine Learning.
+          Pantau grafik perkembangan dan prediksi harga beras mingguan di Kota Tasikmalaya berbasis Machine Learning.
         </p>
       </header>
 
-      {/* RICE PRICE CHART */}
-      <main className="px-4 md:px-8 max-w-7xl mx-auto pb-20">
+      {/* RICE PRICE CHART + HISTORY TABLE */}
+      <main className="px-4 md:px-8 max-w-7xl mx-auto pb-20 space-y-8">
         <RicePricePredictionChart />
+        <RicePriceHistoryTable />
       </main>
     </div>
   );
