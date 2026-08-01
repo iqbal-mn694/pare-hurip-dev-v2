@@ -85,6 +85,15 @@ function formatDate(value: string) {
   })
 }
 
+function SimulatedDataBadge() {
+  return (
+    <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:border-amber-900/30 dark:bg-amber-950/40 dark:text-amber-300">
+      <Activity className="size-3" />
+      Data simulasi — menunggu integrasi backend ML
+    </span>
+  )
+}
+
 export default function ModelPrediksi() {
   const { role } = useAdminAuth()
   const isSuperadmin = role === "superadmin"
@@ -148,11 +157,17 @@ export default function ModelPrediksi() {
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-        <h2 className="mb-4 text-base font-semibold text-slate-900 dark:text-slate-100">
-          Ringkasan Evaluasi Model
-        </h2>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+            Ringkasan Evaluasi Model
+          </h2>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:border-amber-900/30 dark:bg-amber-950/40 dark:text-amber-300">
+            <Activity className="size-3" />
+            Data simulasi — menunggu integrasi backend ML
+          </span>
+        </div>
         <div className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 bg-blue-50/40 p-5 dark:border-slate-800 dark:bg-blue-950/10 border-l-4 border-l-blue-400">
+          <div className="rounded-2xl border border-slate-200 bg-emerald-50/40 p-5 dark:border-slate-800 dark:bg-emerald-950/10 border-l-4 border-l-emerald-400">
             <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
               Evaluasi Klasifikasi (Fase Tanam)
             </p>
@@ -186,7 +201,7 @@ export default function ModelPrediksi() {
               </div>
             </div>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-purple-50/40 p-5 dark:border-slate-800 dark:bg-purple-950/10 border-l-4 border-l-purple-400">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/40 p-5 dark:border-slate-800 dark:bg-slate-900/40 border-l-4 border-l-slate-400">
             <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
               Evaluasi Regresi (Harga Beras)
             </p>
@@ -226,14 +241,14 @@ export default function ModelPrediksi() {
         </p>
       </div>
 
-      <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
         <p className="text-sm text-slate-500 dark:text-slate-400">
           Akurasi menurun seiring horizon makin jauh — ini keterbatasan wajar model, bukan cacat, sesuai prinsip pelaporan yang jujur.
         </p>
       </div>
 
       {message ? (
-        <div className="rounded-3xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-sm dark:border-emerald-900/30 dark:bg-emerald-950/40 dark:text-emerald-200">
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-sm dark:border-emerald-900/30 dark:bg-emerald-950/40 dark:text-emerald-200">
           <div className="flex items-center gap-2">
             <Activity className="size-4" />
             <span>{message}</span>
@@ -251,15 +266,18 @@ export default function ModelPrediksi() {
               Evaluasi walk-forward validation untuk prediksi fase tanam.
             </CardDescription>
           </div>
-          {isSuperadmin ? (
-            <Button className="bg-[#639922] hover:bg-[#58751d]" onClick={() => handleRetrain("rf")} disabled={isTraining}>
-              {isTraining ? <span className="inline-flex items-center gap-2"><RefreshCw className="size-4 animate-spin" /> Melatih ulang model...</span> : <><RefreshCw className="size-4" /> Latih Ulang Model</>}
-            </Button>
-          ) : null}
+          <div className="flex flex-col items-start gap-2 md:items-end">
+            <SimulatedDataBadge />
+            {isSuperadmin ? (
+              <Button className="bg-[#639922] hover:bg-[#58751d]" onClick={() => handleRetrain("rf")} disabled={isTraining}>
+                {isTraining ? <span className="inline-flex items-center gap-2"><RefreshCw className="size-4 animate-spin" /> Melatih ulang model...</span> : <><RefreshCw className="size-4" /> Latih Ulang Model</>}
+              </Button>
+            ) : null}
+          </div>
         </CardHeader>
         <CardContent className="space-y-5">
           {isSuperadmin ? null : (
-            <div className="rounded-3xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm dark:border-amber-900/30 dark:bg-amber-950/40 dark:text-amber-200">
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm dark:border-amber-900/30 dark:bg-amber-950/40 dark:text-amber-200">
               Hanya superadmin yang dapat memicu pelatihan ulang model.
             </div>
           )}
@@ -388,15 +406,18 @@ export default function ModelPrediksi() {
               Evaluasi walk-forward validation untuk prediksi harga beras.
             </CardDescription>
           </div>
-          {isSuperadmin ? (
-            <Button className="bg-[#639922] hover:bg-[#58751d]" onClick={() => handleRetrain("lstm")} disabled={isTraining}>
-              {isTraining ? <span className="inline-flex items-center gap-2"><RefreshCw className="size-4 animate-spin" /> Melatih ulang model...</span> : <><RefreshCw className="size-4" /> Latih Ulang Model</>}
-            </Button>
-          ) : null}
+          <div className="flex flex-col items-start gap-2 md:items-end">
+            <SimulatedDataBadge />
+            {isSuperadmin ? (
+              <Button className="bg-[#639922] hover:bg-[#58751d]" onClick={() => handleRetrain("lstm")} disabled={isTraining}>
+                {isTraining ? <span className="inline-flex items-center gap-2"><RefreshCw className="size-4 animate-spin" /> Melatih ulang model...</span> : <><RefreshCw className="size-4" /> Latih Ulang Model</>}
+              </Button>
+            ) : null}
+          </div>
         </CardHeader>
         <CardContent className="space-y-5">
           {isSuperadmin ? null : (
-            <div className="rounded-3xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm dark:border-amber-900/30 dark:bg-amber-950/40 dark:text-amber-200">
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm dark:border-amber-900/30 dark:bg-amber-950/40 dark:text-amber-200">
               Hanya superadmin yang dapat memicu pelatihan ulang model.
             </div>
           )}
