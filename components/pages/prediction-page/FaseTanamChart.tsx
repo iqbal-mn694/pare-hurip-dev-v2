@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Loader2, Sprout, X, Info } from "lucide-react";
+import { AlertCircle, AlertTriangle, Loader2, Sprout, X } from "lucide-react";
 
 import {
   KECAMATAN_LIST,
@@ -42,9 +42,22 @@ import {
   phaseLabel,
   phaseNormalizedPosition,
 } from "@/lib/fase-tanam/data";
+import { getPhaseColor } from "@/lib/utils";
 
 // Tinggi "lajur" (band) tiap kecamatan di dalam satu chart, dalam unit sumbu-Y.
 const BAND_HEIGHT = 120;
+
+// Legenda warna fase (swatch persegi) yang dipakai pada catatan bawah grafik.
+const PHASE_LEGEND: { value: number; label: string }[] = [
+  { value: 1, label: "Vegetatif 1" },
+  { value: 2, label: "Vegetatif 2" },
+  { value: 3.1, label: "Generatif 1" },
+  { value: 3.2, label: "Generatif 2" },
+  { value: 3.3, label: "Generatif 3" },
+  { value: 4, label: "Panen" },
+  { value: 5, label: "Persiapan Lahan" },
+  { value: 6, label: "Puso" },
+];
 
 interface Loadable {
   series?: KecamatanSeries;
@@ -84,10 +97,16 @@ export default function FaseTanamChart() {
       void load(kec, AGGREGATE_VALUE);
       // Fetch subsegmen options dinamis dari database
       setOptionsLoading((prev) => ({ ...prev, [kec.code]: true }));
-      getSubsegmentOptions(kec.code).then((opts) => {
-        setSubsegmentOptions((prev) => ({ ...prev, [kec.code]: opts }));
-        setOptionsLoading((prev) => ({ ...prev, [kec.code]: false }));
-      });
+      getSubsegmentOptions(kec.code).then(
+        (opts) => {
+          setSubsegmentOptions((prev) => ({ ...prev, [kec.code]: opts }));
+          setOptionsLoading((prev) => ({ ...prev, [kec.code]: false }));
+        },
+        () => {
+          setSubsegmentOptions((prev) => ({ ...prev, [kec.code]: [] }));
+          setOptionsLoading((prev) => ({ ...prev, [kec.code]: false }));
+        }
+      );
     } else {
       setSelectedCodes((prev) => prev.filter((c) => c !== kec.code));
       setHiddenCodes((prev) => {
@@ -96,6 +115,21 @@ export default function FaseTanamChart() {
         return next;
       });
     }
+  };
+
+  const handleSelectAll = () => {
+    KECAMATAN_LIST.forEach((kec) => {
+      if (!selectedCodes.includes(kec.code)) handleToggle(kec, true);
+    });
+  };
+
+  const handleReset = () => {
+    setSelectedCodes([]);
+    setSubsegmentByCode({});
+    setDataByCode({});
+    setHiddenCodes(new Set());
+    setSubsegmentOptions({});
+    setOptionsLoading({});
   };
 
   const handleSubsegmentChange = (kec: KecamatanOption, value: string) => {
@@ -118,7 +152,7 @@ export default function FaseTanamChart() {
 
   const readySeries = selectedKecamatan
     .map((k) => dataByCode[k.code]?.series)
-    .filter((s): s is KecamatanSeries => Boolean(s));
+    .filter((s): s is KecamatanSeries => Boolean(s && s.points.length > 0));
 
   const isAnyLoading = selectedCodes.some((c) => dataByCode[c]?.loading);
 
@@ -199,7 +233,10 @@ export default function FaseTanamChart() {
             {KECAMATAN_LIST.map((kec) => {
               const checked = selectedCodes.includes(kec.code);
               return (
-                <div key={kec.code} className="flex items-center gap-2">
+                <div
+                  key={kec.code}
+                  className="flex items-center gap-2 rounded-md px-1.5 py-1 transition-colors hover:bg-green-50/60"
+                >
                   <Checkbox
                     id={`kec-${kec.code}`}
                     checked={checked}
@@ -218,6 +255,28 @@ export default function FaseTanamChart() {
                 </div>
               );
             })}
+          </div>
+
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              type="button"
+              onClick={handleSelectAll}
+              disabled={selectedCodes.length === KECAMATAN_LIST.length}
+              className="text-xs font-medium text-green-700 hover:text-green-800 hover:underline cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Pilih Semua
+            </button>
+            <button
+              type="button"
+              onClick={handleReset}
+              disabled={selectedCodes.length === 0}
+              className="text-xs font-medium text-slate-500 hover:text-slate-700 hover:underline cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Reset
+            </button>
+            <span className="ml-auto text-xs text-muted-foreground">
+              {selectedCodes.length}/{KECAMATAN_LIST.length} terpilih
+            </span>
           </div>
 
           {/* Tabel subsegmen: muncul per kecamatan yang sudah dicentang */}
@@ -299,11 +358,16 @@ export default function FaseTanamChart() {
           </div>
 
           {selectedKecamatan.length === 0 ? (
-            <div className="flex flex-col items-center justify-center text-center py-16 text-muted-foreground gap-2">
-              <Info className="h-6 w-6" />
-              <p className="text-sm">
+            <div className="flex flex-col items-center justify-center text-center py-16 text-muted-foreground gap-3">
+              <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-green-50">
+                <Sprout className="h-7 w-7 text-green-700" />
+              </span>
+              <p className="text-sm max-w-sm">
                 Pilih minimal satu kecamatan pada panel di samping untuk
                 menampilkan grafik prediksi.
+              </p>
+              <p className="text-xs text-slate-400">
+                Klik nama kecamatan pada daftar filter untuk mulai membandingkan.
               </p>
             </div>
           ) : (
@@ -317,7 +381,7 @@ export default function FaseTanamChart() {
                     <button
                       key={kec.code}
                       onClick={() => toggleHidden(kec.code)}
-                      className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-opacity ${
+                      className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-opacity cursor-pointer hover:border-green-300 ${
                         hidden ? "opacity-40" : "opacity-100"
                       }`}
                     >
@@ -338,6 +402,70 @@ export default function FaseTanamChart() {
                 })}
               </div>
 
+              {/* Status muat data per kecamatan */}
+              {selectedKecamatan.map((kec) => {
+                const series = dataByCode[kec.code]?.series;
+                if (!series) return null;
+                if (series.historyError) {
+                  return (
+                    <div
+                      key={kec.code}
+                      className="mb-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300"
+                    >
+                      <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <div>
+                        <p className="font-medium">
+                          {kec.name} — Gagal memuat data historis
+                        </p>
+                        <p className="mt-0.5 text-red-600/90 dark:text-red-400/90">
+                          {series.historyError} Periksa koneksi database lalu pilih
+                          ulang kecamatan ini.
+                        </p>
+                      </div>
+                    </div>
+                  );
+                }
+                if (series.predictionError) {
+                  return (
+                    <div
+                      key={kec.code}
+                      className="mb-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-300"
+                    >
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <div>
+                        <p className="font-medium">
+                          {kec.name} — Histori tampil, prediksi gagal
+                        </p>
+                        <p className="mt-0.5 text-amber-600/90 dark:text-amber-400/90">
+                          {series.predictionError} Grafik hanya menampilkan data
+                          historis.
+                        </p>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })}
+
+              {isAnyLoading && readySeries.length === 0 ? (
+                <div className="flex flex-col items-center justify-center text-center py-16 text-muted-foreground gap-3">
+                  <Loader2 className="h-7 w-7 animate-spin text-emerald-600" />
+                  <p className="text-sm max-w-sm">Memuat data fase tanam...</p>
+                  <p className="text-xs text-slate-400">
+                    Mengambil data historis dan menjalankan prediksi model.
+                  </p>
+                </div>
+              ) : readySeries.length === 0 ? (
+                <div className="flex flex-col items-center justify-center text-center py-16 text-muted-foreground gap-3">
+                  <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-red-50 dark:bg-red-950/40">
+                    <AlertCircle className="h-7 w-7 text-red-600" />
+                  </span>
+                  <p className="text-sm max-w-sm">
+                    Tidak ada data yang dapat ditampilkan untuk kecamatan terpilih.
+                  </p>
+                </div>
+              ) : (
+                <>
               <div className="relative w-full" style={{ height: Math.max(300, totalBands * 150) }}>
                 {/* Phase scale labels on the right */}
                 <div className="pointer-events-none absolute inset-y-0 right-3 top-2 bottom-8 flex flex-col justify-between">
@@ -506,14 +634,33 @@ export default function FaseTanamChart() {
                 })}
               </div>
 
-              <div className="mt-4 rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
-                Skala fase mengikuti label model ML: Vegetatif 1, Vegetatif 2, Generatif 1, Generatif 2, Generatif 3, Panen, dan Persiapan Lahan. Garis solid menunjukkan data historis, lalu garis putus-putus menunjukkan 3 bulan prediksi.
+              <div className="mt-4 rounded-lg border bg-muted/30 p-3.5 space-y-3">
+                <div className="flex flex-wrap gap-x-4 gap-y-2">
+                  {PHASE_LEGEND.map((item) => (
+                    <span
+                      key={item.value}
+                      className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
+                    >
+                      <span
+                        className="inline-block h-2.5 w-2.5 rounded-[3px] ring-1 ring-black/10 shrink-0"
+                        style={{ background: getPhaseColor(item.value) }}
+                      />
+                      {item.label}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground border-t border-slate-200/70 pt-3">
+                  Garis utuh menampilkan data historis, sedangkan garis putus-putus menunjukkan prediksi 3 bulan ke depan.
+                </p>
               </div>
 
               {isAnyLoading && (
-                <p className="mt-3 text-xs text-muted-foreground flex items-center gap-1.5">
-                  <Loader2 className="h-3 w-3 animate-spin" /> Memuat prediksi terbaru…
+                <p className="mt-3 text-xs text-muted-foreground flex items-center gap-2">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-600 animate-pulse" />
+                  Memuat prediksi terbaru…
                 </p>
+              )}
+              </>
               )}
             </>
           )}
