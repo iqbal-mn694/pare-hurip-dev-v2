@@ -23,60 +23,69 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = React.useState(true)
 
   const loadRole = React.useCallback(async (userId: string) => {
-    const { data: profile, error } = await supabase
+    const { data: profile } = await supabase
       .from("profiles")
       .select("name, email, role")
       .eq("id", userId)
       .single()
 
-    console.log("[AdminAuth] loadRole:", { profile, error })
     setId(userId)
     setRole(profile?.role ?? "")
     setName(profile?.name ?? "")
     setEmail(profile?.email ?? "")
   }, [])
 
-  React.useEffect(() => {
-    console.log("[AdminAuth] effect started, calling getUser()")
-    supabase.auth.getUser().then(({ data: { user }, error }) => {
-      console.log("[AdminAuth] getUser:", { userId: user?.id, error })
-      if (user) {
-        loadRole(user.id)
-      } else {
-        setId("")
-        setRole("")
-        setName("")
-        setEmail("")
-      }
-      console.log("[AdminAuth] calling setLoading(false)")
-      setLoading(false)
-    }).catch((err) => {
-      console.error("[AdminAuth] getUser THREW an error:", err)
-      setLoading(false)
-    })
-
-    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("[AdminAuth] onAuthStateChange:", { event, userId: session?.user?.id })
-      if (session?.user) {
-        loadRole(session.user.id)
-      } else {
-        setId("")
-        setRole("")
-        setName("")
-        setEmail("")
-      }
-    })
-
-    return () => listener.subscription.unsubscribe()
-  }, [loadRole])
-
-  const signOut = React.useCallback(async () => {
-    await supabase.auth.signOut()
+  const clearState = React.useCallback(() => {
     setId("")
     setRole("")
     setName("")
     setEmail("")
   }, [])
+
+  React.useEffect(() => {
+    let active = true
+
+    async function init() {
+      // getUser() memvalidasi JWT lewat jaringan; bila access token
+      // kedaluwarsa, supabase-js otomatis refresh memakai refresh_token
+      // sebelum mengembalikan user. Ini mencegah INITIAL_SESSION dengan
+      // session basi yang membuat role kosong lalu diusir ke login.
+      const { data } = await supabase.auth.getUser()
+
+      if (!active) return
+
+      if (data?.user) {
+        await loadRole(data.user.id)
+      } else {
+        clearState()
+      }
+      if (active) setLoading(false)
+    }
+
+    init()
+
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        if (session?.user) {
+          loadRole(session.user.id)
+        }
+        setLoading(false)
+      } else if (event === "SIGNED_OUT") {
+        clearState()
+        setLoading(false)
+      }
+    })
+
+    return () => {
+      active = false
+      listener.subscription.unsubscribe()
+    }
+  }, [clearState, loadRole])
+
+  const signOut = React.useCallback(async () => {
+    await supabase.auth.signOut()
+    clearState()
+  }, [clearState])
 
   return (
     <AdminAuthContext.Provider value={{ id, role, name, email, setRole, loading, signOut }}>
@@ -91,4 +100,4 @@ export function useAdminAuth() {
     throw new Error("useAdminAuth must be used within AdminAuthProvider")
   }
   return context
-} 
+}
