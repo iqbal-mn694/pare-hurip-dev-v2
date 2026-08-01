@@ -57,12 +57,16 @@ export function getKecamatanColor(code: string): string {
 export const AGGREGATE_VALUE = "aggregate";
 
 export async function getSubsegmentOptions(kecamatanCode: string): Promise<string[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("data_ksa")
     .select("subsegment")
     .like("segment_id", `${kecamatanCode}%`)
     .neq("subsegment", "")
     .not("subsegment", "is", null);
+
+  if (error) {
+    throw new Error("Gagal memuat daftar subsegmen.")
+  }
 
   const unique = [...new Set((data ?? []).map((r) => r.subsegment).filter(Boolean))] as string[];
   return unique.sort();
@@ -93,6 +97,10 @@ export interface KecamatanSeries {
   kecamatanName: string;
   subsegment: string; // "aggregate" atau kode subsegmen, mis. "A1"
   points: PhasePoint[]; // 9 historis + 3 prediksi = 12 titik, urut waktu
+  /** Terisi bila pemuatan data historis dari database gagal */
+  historyError?: string;
+  /** Terisi bila layanan prediksi ML tidak dapat dijangkau */
+  predictionError?: string;
 }
 
 const MONTH_NAMES_SHORT = [
@@ -112,16 +120,16 @@ interface DataKsaRow {
 }
 
 /**
- * Ambil data historis dari tabel `data_ksa` untuk satu kecamatan dan subsegmen.
+ * Ambil baris mentah `data_ksa` untuk satu kecamatan dan subsegmen.
  * Filter menggunakan 7-digit kode kecamatan sebagai prefix segment_id.
- * - Jika subsegment === "aggregate", semua subsegmen di kecamatan dirata-rata
- *   per periode.
- * - Jika data tidak ditemukan, mengembalikan array kosong (tidak ada fallback dummy).
+ * - Jika subsegment === "aggregate", semua subsegmen di kecamatan diambil.
+ * - Jika query database gagal, melempar error (ditangani pemanggil).
+ * - Jika data tidak ditemukan, mengembalikan array kosong (bukan error).
  */
-export async function fetchHistoryFromDataKsa(
+async function fetchRawRows(
   kecamatanCode: string,
   subsegment: string
-): Promise<PhasePoint[]> {
+): Promise<DataKsaRow[]> {
   let query = supabase
     .from("data_ksa")
     .select("segment_id, subsegment, periode, phase")
@@ -136,11 +144,17 @@ export async function fetchHistoryFromDataKsa(
 
   const { data, error } = await query.order("periode", { ascending: true });
 
-  if (error || !data || data.length === 0) {
-    return [];
+  if (error) {
+    throw new Error("Gagal memuat data historis dari database.");
   }
 
-  const rows = data as DataKsaRow[];
+  return (data ?? []) as DataKsaRow[];
+}
+
+/** Susun deret historis dari baris mentah (aggregate = rata-rata per periode,
+ * selain itu = modus per periode). */
+function buildHistoryFromRows(rows: DataKsaRow[], subsegment: string): PhasePoint[] {
+  if (rows.length === 0) return [];
 
   if (subsegment === AGGREGATE_VALUE) {
     const grouped = new Map<string, DataKsaRow[]>();
@@ -181,6 +195,21 @@ export async function fetchHistoryFromDataKsa(
       kind: "historical" as const,
     };
   });
+}
+
+/**
+ * Ambil data historis dari tabel `data_ksa` untuk satu kecamatan dan subsegmen.
+ * - Jika subsegment === "aggregate", semua subsegmen di kecamatan dirata-rata
+ *   per periode.
+ * - Jika query database gagal, melempar error (ditangani pemanggil).
+ * - Jika data tidak ditemukan, mengembalikan array kosong (bukan error).
+ */
+export async function fetchHistoryFromDataKsa(
+  kecamatanCode: string,
+  subsegment: string
+): Promise<PhasePoint[]> {
+  const rows = await fetchRawRows(kecamatanCode, subsegment);
+  return buildHistoryFromRows(rows, subsegment);
 }
 
 // ---------------------------------------------------------------------------
@@ -262,55 +291,59 @@ function nearestKnownPhase(value: number): number {
   , displayOrder[0]);
 }
 
+/** Cache hasil prediksi per (kecamatan, subsegmen, periode terakhir).
+ *  Invalisi otomatis saat periode terakhir berubah (data baru masuk). */
+const predictionCache = new Map<string, PhasePoint[]>();
+const PREDICTION_CACHE_MAX = 200;
+
 /**
  * Ambil 3 titik prediksi (h+1..h+3) untuk satu kecamatan.
  * - Jika `subsegment === "aggregate"`, ambil 2 data poin terakhir PER
- *   SUBSEGMEN dari database, kirim batch, lalu rata-rata hasil prediksi
- *   per horizon.
+ *   SUBSEGMEN dari `rawRows` (hasil query yang sama dengan historis),
+ *   kirim batch, lalu rata-rata hasil prediksi per horizon.
  * - Selain itu, kirim satu item dengan data dari riwayat (history).
- * - `kecamatanCode` (7-digit) dipakai untuk query subsegmen & data.
+ * - Hasil di-cache per (kecamatan, subsegmen, periode terakhir).
  */
 export async function fetchPrediction(
   districtCode: string,
   subsegment: string,
   history: PhasePoint[],
-  kecamatanCode: string
+  kecamatanCode: string,
+  rawRows: DataKsaRow[]
 ): Promise<PhasePoint[]> {
   const last = history[history.length - 1];
   const prev = history[history.length - 2] ?? last;
 
+  const cacheKey = `${kecamatanCode}|${subsegment}|${last.year}-${last.month}`;
+  const cached = predictionCache.get(cacheKey);
+  if (cached) return cached;
+
   let batch: RandomForestBatchResponse;
 
   if (subsegment === AGGREGATE_VALUE) {
-    // 1 data query: ambil max 2 baris terakhir per subsegmen
-    const { data: allRows } = await supabase
-      .from("data_ksa")
-      .select("segment_id, subsegment, periode, phase")
-      .like("segment_id", `${kecamatanCode}%`)
-      .not("phase", "like", "7.%")
-      .neq("phase", "8")
-      .order("periode", { ascending: false });
-
-    if (!allRows || allRows.length === 0) return [];
-
+    // Susun 2 baris terbaru per subsegmen dari baris yang sudah diambil
+    // (baris urut ascending periode; sisakan 2 terakhir per subsegmen).
     const bySub = new Map<string, DataKsaRow[]>();
-    for (const row of allRows as DataKsaRow[]) {
+    for (const row of rawRows) {
       const list = bySub.get(row.subsegment) ?? [];
-      if (list.length < 2) list.push(row);
+      list.push(row);
+      if (list.length > 2) list.shift();
       bySub.set(row.subsegment, list);
     }
 
     const paramsList: PredictPhaseParams[] = [];
     for (const [sub, rows] of bySub) {
-      const [year, month] = rows[0].periode.split("-").map(Number);
+      const newest = rows[rows.length - 1];
+      const prevRow = rows.length > 1 ? rows[rows.length - 2] : newest;
+      const [year, month] = newest.periode.split("-").map(Number);
       paramsList.push({
         districtCode,
         subsegment: sub,
-        currentPhase: parseFloat(rows[0].phase),
-        previousPhase: rows.length > 1 ? parseFloat(rows[1].phase) : parseFloat(rows[0].phase),
+        currentPhase: parseFloat(newest.phase),
+        previousPhase: parseFloat(prevRow.phase),
         month,
         year,
-        segmentId: rows[0].segment_id,
+        segmentId: newest.segment_id,
       });
     }
 
@@ -357,15 +390,37 @@ export async function fetchPrediction(
     });
   }
 
+  if (predictionCache.size >= PREDICTION_CACHE_MAX) predictionCache.clear();
+  predictionCache.set(cacheKey, combined);
   return combined;
 }
 
-/** Gabungkan historis (dari data_ksa) + prediksi (API) jadi satu deret waktu penuh. */
+/**
+ * Gabungkan historis (dari data_ksa) + prediksi (API) jadi satu deret waktu penuh.
+ * - Gagal muat historis -> points kosong + historyError.
+ * - Historis kosong -> points kosong tanpa error.
+ * - ML tidak dapat dijangkau -> historis tetap tampil + predictionError.
+ */
 export async function loadKecamatanSeries(
   kec: KecamatanOption,
   subsegment: string
 ): Promise<KecamatanSeries> {
-  const history = await fetchHistoryFromDataKsa(kec.code, subsegment);
+  let history: PhasePoint[];
+  let rawRows: DataKsaRow[];
+  try {
+    // Satu query DB per kecamatan: baris mentah dipakai untuk historis
+    // DAN untuk menyusun input prediksi (tanpa query kedua).
+    rawRows = await fetchRawRows(kec.code, subsegment);
+    history = buildHistoryFromRows(rawRows, subsegment);
+  } catch (error) {
+    return {
+      districtCode: kec.districtCode,
+      kecamatanName: kec.name,
+      subsegment,
+      points: [],
+      historyError: error instanceof Error ? error.message : "Gagal memuat data historis.",
+    };
+  }
 
   if (history.length === 0) {
     return {
@@ -376,7 +431,19 @@ export async function loadKecamatanSeries(
     };
   }
 
-  const prediction = await fetchPrediction(kec.districtCode, subsegment, history, kec.code);
+  let prediction: PhasePoint[];
+  try {
+    prediction = await fetchPrediction(kec.districtCode, subsegment, history, kec.code, rawRows);
+  } catch (error) {
+    return {
+      districtCode: kec.districtCode,
+      kecamatanName: kec.name,
+      subsegment,
+      points: history,
+      predictionError:
+        error instanceof Error ? error.message : "Layanan prediksi tidak dapat dijangkau.",
+    };
+  }
 
   return {
     districtCode: kec.districtCode,
