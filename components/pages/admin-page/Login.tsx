@@ -1,16 +1,16 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { Eye, EyeOff } from "lucide-react"
+import { Eye, EyeOff, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { supabase } from "@/lib/supabase/client"
+import { showRouteTransition } from "@/lib/route-transition"
 import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext"
 
 type LoginErrors = {
@@ -29,18 +29,16 @@ export default function Login() {
 
   const [email, setEmail] = React.useState("")
   const [password, setPassword] = React.useState("")
-  const [rememberMe, setRememberMe] = React.useState(false)
   const [showPassword, setShowPassword] = React.useState(false)
   const [errors, setErrors] = React.useState<LoginErrors>({})
   const [loading, setLoading] = React.useState(false)
 
   React.useEffect(() => {
-  console.log("[Login] guard check:", { authLoading, currentRole })
-  if (!authLoading && currentRole) {
-    console.log("[Login] REDIRECTING to dashboard")
-    router.replace("/admin/dashboard")
-  }
-}, [authLoading, currentRole, router])
+    if (!authLoading && currentRole) {
+      showRouteTransition()
+      router.replace("/admin/dashboard")
+    }
+  }, [authLoading, currentRole, router])
 
   const validate = React.useCallback(() => {
     const nextErrors: LoginErrors = {}
@@ -100,14 +98,18 @@ export default function Login() {
     }
 
     setAdminRole(profile.role)
-    router.push("/admin/dashboard")
-    router.refresh()
+    showRouteTransition()
   }
 
   if (authLoading || currentRole) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <p className="text-sm text-slate-500">Memuat...</p>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="size-8 animate-spin text-emerald-600" />
+          <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
+            Menyiapkan halaman...
+          </p>
+        </div>
       </div>
     )
   }
@@ -152,9 +154,7 @@ export default function Login() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="admin-password" className="flex items-center justify-between">
-                  <span>Password</span>
-                </Label>
+                <Label htmlFor="admin-password">Password</Label>
                 <div className="relative">
                   <Input
                     id="admin-password"
@@ -179,24 +179,6 @@ export default function Login() {
                 ) : null}
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
-                <label className="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(event) => setRememberMe(event.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-900"
-                  />
-                  Ingat saya
-                </label>
-                <Link
-                  href="#"
-                  className="text-sm text-emerald-700 hover:text-emerald-900 dark:text-emerald-300 dark:hover:text-emerald-100"
-                >
-                  Lupa kata sandi?
-                </Link>
-              </div>
-
               <Button
                 type="submit"
                 disabled={loading}
@@ -207,10 +189,6 @@ export default function Login() {
             </form>
           </CardContent>
         </Card>
-
-        <div className="rounded-xl border border-slate-200 bg-white/80 px-5 py-4 text-sm text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-300">
-          Halaman ini khusus untuk admin BPS Kota Tasikmalaya. Pengunjung umum tidak perlu login, silakan gunakan menu Fase Tanam di beranda.
-        </div>
       </div>
     </div>
   )

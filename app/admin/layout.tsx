@@ -2,7 +2,9 @@
 
 import * as React from "react"
 import { useRouter, usePathname } from "next/navigation"
+import { Loader2 } from "lucide-react"
 import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext"
+import { showRouteTransition } from "@/lib/route-transition"
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -13,6 +15,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   React.useEffect(() => {
     if (!isLoginPage && !loading && !role) {
+      showRouteTransition()
       router.replace("/admin/login")
     }
   }, [isLoginPage, loading, role, router])
@@ -25,8 +28,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (loading || !role) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <p className="text-sm text-slate-500">Memuat...</p>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="size-8 animate-spin text-emerald-600" />
+          <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
+            Menyiapkan halaman...
+          </p>
+        </div>
       </div>
     )
   }
