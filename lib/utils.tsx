@@ -87,6 +87,26 @@ export const validateStructure = (headers: string[]): string | null => {
 
 export const getPhaseColor = (phase: number | null): string => {
   if (phase === null) return "#9E9E9E";
+  if (phase === 13 || phase === 4.5) return "#FCCDE5";
+
+  switch (phase) {
+    case 5: return "#FCCDE5"; // Persiapan Lahan
+    case 1: return "#8DD3C7"; // Vegetatif 1
+    case 2: return "#BEBADA"; // Vegetatif 2
+    case 3.1: return "#80B1D3"; // Generatif 1
+    case 3.2: return "#FB8072"; // Generatif 2
+    case 3.3: return "#B3DE69"; // Generatif 3
+    case 4: return "#FDB462"; // Panen
+    case 6: return "#333333"; // Puso
+    case 8: return "#BDBDBD"; // Bukan Sawah
+    default: return "#78909C"; // Default
+  }
+};
+
+// Palet khusus peta sawah: ramp hijau natural (fase vegetatif/generatif)
+// agar per petak tetap terlihat seperti hamparan sawah.
+export const getSawahPhaseColor = (phase: number | null): string => {
+  if (phase === null) return "#9E9E9E";
   if (phase === 13 || phase === 4.5) return "#A16D28";
 
   switch (phase) {
