@@ -557,7 +557,7 @@ export default function ManageDataKSA() {
                               variant="outline"
                               size="icon"
                               onClick={() => openEdit(row.id)}
-                              className="border-slate-200 text-slate-600 hover:bg-slate-100"
+                              className="border-slate-200 text-slate-600 hover:bg-slate-100 max-md:size-10"
                               aria-label="Edit"
                             >
                               <Edit3 className="size-4" />
@@ -566,7 +566,7 @@ export default function ManageDataKSA() {
                               variant="outline"
                               size="icon"
                               onClick={() => openDelete(row.id)}
-                              className="border-slate-200 text-slate-600 hover:bg-slate-100"
+                              className="border-slate-200 text-slate-600 hover:bg-slate-100 max-md:size-10"
                               aria-label="Hapus"
                             >
                               <Trash2 className="size-4" />
@@ -637,7 +637,7 @@ export default function ManageDataKSA() {
 
       {isAddOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
-          <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-950">
+          <div className="w-full max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-950">
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800">
               <div>
                 <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Tambah Data Manual</h2>
@@ -709,7 +709,7 @@ export default function ManageDataKSA() {
 
       {isDeleteOpen && selectedDeleteRow ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
-          <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-950">
+          <div className="w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-950">
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800">
               <div>
                 <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Konfirmasi Hapus</h2>

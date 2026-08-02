@@ -246,6 +246,7 @@ export default function RegionReference() {
                             variant="secondary"
                             size="sm"
                             onClick={() => openEdit(item.id)}
+                            className="max-md:h-10 max-md:w-10"
                           >
                             <Edit3 className="size-4" />
                           </Button>
@@ -253,6 +254,7 @@ export default function RegionReference() {
                           variant="destructive"
                           size="sm"
                           onClick={() => openDeleteModal(item)}
+                          className="max-md:h-10 max-md:w-10"
                         >
                           <Trash2 className="size-4" />
                         </Button>
@@ -269,7 +271,7 @@ export default function RegionReference() {
 
       {modalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
-          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900">
+          <div className="w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900">
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">

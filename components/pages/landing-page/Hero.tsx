@@ -61,7 +61,7 @@ const Hero: React.FC<HeroProps> = ({ heading, message }) => {
           // CHANGE HERE:
           viewport={{ once: false, amount: 0.5 }} // Animation runs every time it enters the viewport
         >
-          <div className="mt-10 text-center sm:ml-[10rem] sm:text-left max-w-[90%] sm:max-w-[800px]">
+          <div className="mt-10 mx-auto text-center sm:ml-[10rem] sm:text-left max-w-[90%] sm:max-w-[800px]">
             <motion.h2
               className="text-3xl sm:text-4xl font-bold"
               variants={itemVariants}

@@ -114,7 +114,7 @@ const Header = () => {
         </ul>
 
         {/* Mobile Hamburger */}
-        <div className="sm:hidden z-20" onClick={handleNav}>
+        <div className="sm:hidden z-20 p-2" onClick={handleNav}>
           {nav ? (
             <AiOutlineClose size={28} style={{ color: textColor }} />
           ) : (

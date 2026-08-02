@@ -149,7 +149,7 @@ export default function PlantingPhaseMap() {
       <Card>
         <CardContent className="py-12 space-y-3">
           <div className="h-4 w-56 bg-slate-200 rounded animate-pulse" />
-          <div className="h-4 w-80 bg-slate-200 rounded animate-pulse" />
+          <div className="h-4 w-full max-w-80 bg-slate-200 rounded animate-pulse" />
           <div className="h-[500px] w-full bg-slate-100 rounded-lg animate-pulse mt-2" />
         </CardContent>
       </Card>

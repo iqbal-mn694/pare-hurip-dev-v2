@@ -43,6 +43,7 @@ import {
   phaseNormalizedPosition,
 } from "@/lib/planting-phase/data";
 import { getPhaseColor } from "@/lib/planting-phase/constants";
+import { useIsMobile } from "@/lib/use-media-query";
 
 // Height of each district "lane" (band) within the chart, in Y-axis units.
 const BAND_HEIGHT = 120;
@@ -114,6 +115,7 @@ function buildChartRows(
 }
 
 export default function PlantingPhaseChart() {
+  const isMobile = useIsMobile();
   // array order = band stacking order (first selected is on top)
   const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
   const [subsegmentByCode, setSubsegmentByCode] = useState<Record<string, string>>({});
@@ -392,7 +394,7 @@ export default function PlantingPhaseChart() {
                     <button
                       key={district.code}
                       onClick={() => toggleHidden(district.code)}
-                      className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-opacity cursor-pointer hover:border-green-300 ${
+                      className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs transition-opacity cursor-pointer hover:border-green-300 ${
                         hidden ? "opacity-40" : "opacity-100"
                       }`}
                     >
@@ -496,7 +498,7 @@ export default function PlantingPhaseChart() {
                   ))}
                 </div>
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={rows} margin={{ top: 24, right: 56, left: 32, bottom: 16 }}>
+                  <ComposedChart data={rows} margin={{ top: 24, right: isMobile ? 40 : 56, left: 32, bottom: 16 }}>
                     <CartesianGrid strokeDasharray="2 2" vertical={false} stroke="var(--color-border)" strokeOpacity={0.15} />
 
                     {/* Alternating band backgrounds */}
@@ -551,7 +553,8 @@ export default function PlantingPhaseChart() {
 
                     <XAxis
                       dataKey="monthLabel"
-                      tick={{ fontSize: 11 }}
+                      tick={{ fontSize: isMobile ? 10 : 11 }}
+                      minTickGap={isMobile ? 20 : 8}
                       axisLine={{ stroke: "var(--color-border)" }}
                     />
                     <YAxis
