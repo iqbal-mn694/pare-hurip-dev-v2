@@ -23,18 +23,11 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Activity,
-  AlertTriangle,
   ChevronDown,
-  Info,
-  Loader2,
-  Minus,
-  TrendingDown,
-  TrendingUp,
   Wheat,
 } from "lucide-react";
 import {
   RICE_TYPES,
-  RiceTypeOption,
   ML_API_BASE_URL,
   DailyPricePoint,
   WeeklyPoint,
@@ -44,57 +37,38 @@ import {
   computeVolatility,
   predictRicePrices,
 } from "@/lib/rice-price/api";
+import {
+  formatRupiah,
+  TypeChartInfo,
+  TypeSummaryCard,
+  AverageVolatilityCard,
+  ErrorBanner,
+  ChartEmptyState,
+  ChartLegend,
+} from "@/components/pages/compare-page/RicePriceChartParts";
 
 // ---------------------------------------------------------------------------
-// Konfigurasi
+// Configuration
 // ---------------------------------------------------------------------------
 
 const HISTORY_WEEKS = 8;
 const DAILY_DAYS = 63;
 const FEED_DAYS = 61;
 const PREDICTION_WEEKS = 4;
-const PREDICTION_HORIZON_DAYS = PREDICTION_WEEKS * 7; // 28 hari (4 minggu) dari 30 hari yg dikembalikan API
+const PREDICTION_HORIZON_DAYS = PREDICTION_WEEKS * 7; // 28 days (4 weeks) out of the 30 days returned by the API
 const AUTO_RETRY_DELAY_MS = 4000;
 const FUTURE_KEY_PREFIX = "future";
-
-const formatRupiah = (v: number | undefined | null) =>
-  v === undefined || v === null
-    ? "–"
-    : new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        minimumFractionDigits: 0,
-      }).format(v);
 
 const formatDateShort = (iso: string) =>
   new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
 
-function volatilityTier(v: number): { label: string; className: string } {
-  if (v < 1.5)
-    return { label: "Stabil", className: "bg-emerald-100 text-emerald-700 border-emerald-300" };
-  if (v < 4)
-    return { label: "Sedang", className: "bg-amber-100 text-amber-700 border-amber-300" };
-  return { label: "Tinggi", className: "bg-rose-100 text-rose-700 border-rose-300" };
-}
-
-/** Agregasi 28 hari pertama dari array prediksi harian API menjadi 4 titik mingguan */
+/** Aggregate the first 28 days of the API's daily predictions into 4 weekly points */
 function buildFutureWeeklyPoints(prediction: RicePricePredictionResult | undefined): WeeklyPoint[] {
   if (!prediction || prediction.predictions.length === 0) return [];
   const daily: DailyPricePoint[] = prediction.predictions
     .slice(0, PREDICTION_HORIZON_DAYS)
     .map((p) => ({ date: p.target_date, price: p.predicted_price }));
   return aggregateWeekly(daily, FUTURE_KEY_PREFIX).slice(0, PREDICTION_WEEKS);
-}
-
-interface TypeChartInfo {
-  type: RiceTypeOption;
-  daily: DailyPricePoint[];
-  weekly: WeeklyPoint[];
-  prediction?: RicePricePredictionResult;
-  predictedWeeks: WeeklyPoint[]; // hingga 4 titik mingguan ke depan
-  predictedAvg?: number; // rata-rata seluruh predictedWeeks
-  predictedRangeLabel?: string;
-  historicalVolatility: number;
 }
 
 interface ChartRow {
@@ -147,7 +121,7 @@ export default function RicePricePredictionChart() {
     return map;
   }, [dailyByType]);
 
-  // --- Prediksi diambil untuk SEMUA jenis beras sekaligus (dipakai Card 1) ---
+  // --- Predictions fetched for ALL rice types at once (used by Card 1) ---
   const [predictions, setPredictions] = useState<Record<string, RicePricePredictionResult>>({});
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -158,7 +132,7 @@ export default function RicePricePredictionChart() {
     setLoading(true);
     setErrorMsg(null);
 
-    const store = dailyByType; // baca sekali dalam closure
+    const store = dailyByType; // read once in the closure
     if (Object.keys(store).length === 0) {
       setLoading(false);
       return;
@@ -177,8 +151,9 @@ export default function RicePricePredictionChart() {
 
     if (items.length === 0) { setLoading(false); return; }
 
-    predictRicePrices(items)
-      .then((results) => {
+    (async () => {
+      try {
+        const results = await predictRicePrices(items);
         if (cancelled) return;
         const map: Record<string, RicePricePredictionResult> = {};
         results.forEach((r) => {
@@ -186,8 +161,7 @@ export default function RicePricePredictionChart() {
           if (type) map[type.id] = r;
         });
         setPredictions(map);
-      })
-      .catch((err) => {
+      } catch (err) {
         if (cancelled) return;
         setPredictions({});
         setErrorMsg(
@@ -201,17 +175,17 @@ export default function RicePricePredictionChart() {
             if (!cancelled) setRetryTick((t) => t + 1);
           }, AUTO_RETRY_DELAY_MS);
         }
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setLoading(false);
-      });
+      }
+    })();
 
     return () => {
       cancelled = true;
     };
   }, [dailyByType, retryTick]);
 
-  // --- Info lengkap utk SEMUA jenis beras (dipakai Card 1: ringkasan) ---
+  // --- Full info for ALL rice types (used by Card 1: summary) ---
   const allInfos: TypeChartInfo[] = useMemo(() => {
     return RICE_TYPES.map((type) => {
       const daily = dailyByType[type.id];
@@ -245,7 +219,7 @@ export default function RicePricePredictionChart() {
       ? allInfos.reduce((s, i) => s + i.historicalVolatility, 0) / allInfos.length
       : 0;
 
-  // --- Selector KHUSUS untuk chart di Card 2 ---
+  // --- Selector SPECIFIC to the chart in Card 2 ---
   const [chartSelectedIds, setChartSelectedIds] = useState<string[]>([
     RICE_TYPES[0].id,
     RICE_TYPES[2].id,
@@ -276,7 +250,7 @@ export default function RicePricePredictionChart() {
   );
 
   // ---------------------------------------------------------------------------
-  // Susun data grafik gabungan: historis + 4 titik mingguan prediksi ke depan
+  // Build combined chart data: history + 4 weekly prediction points ahead
   // ---------------------------------------------------------------------------
   const { rows, boundaryKey, rangeLookup } = useMemo(() => {
     const referenceWeekly = chartInfos[0]?.weekly ?? weeklyByType[RICE_TYPES[0].id];
@@ -297,7 +271,7 @@ export default function RicePricePredictionChart() {
         if (!point) return;
         row[`hist_${info.type.id}`] = point.avgPrice;
         if (isBoundary) {
-          row[`pred_${info.type.id}`] = point.avgPrice; // penyambung garis ke titik prediksi pertama
+          row[`pred_${info.type.id}`] = point.avgPrice; // connects the line to the first prediction point
         }
       });
       return row;
@@ -320,9 +294,9 @@ export default function RicePricePredictionChart() {
         futureRows.push(row);
       });
     } else if (referenceWeekly.length > 0) {
-      // Placeholder 4 minggu prediksi saat hasil ML belum tiba, supaya
-      // sumbu-X stabil sejak awal (historis tidak membentang penuh lalu
-      // "melompat" ketika prediksi datang).
+      // Placeholder 4 prediction weeks while ML results are pending, so the
+      // X axis is stable from the start (history doesn't stretch fully and
+      // then "jump" when predictions arrive).
       const base = new Date(referenceWeekly[referenceWeekly.length - 1].endDate);
       for (let i = 0; i < PREDICTION_WEEKS; i++) {
         const start = new Date(base);
@@ -390,17 +364,7 @@ export default function RicePricePredictionChart() {
       return (
         <Card className="border-amber-300 dark:border-amber-800 shadow-sm">
           <CardContent className="p-4">
-            <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 text-sm text-amber-800 dark:text-amber-300">
-              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-              <span className="flex-1">{historyError}</span>
-              <button
-                type="button"
-                onClick={() => setHistoryRetryTick((t) => t + 1)}
-                className="shrink-0 text-xs font-medium underline hover:no-underline"
-              >
-                Coba Lagi
-              </button>
-            </div>
+            <ErrorBanner message={historyError} onRetry={() => setHistoryRetryTick((t) => t + 1)} />
           </CardContent>
         </Card>
       );
@@ -442,7 +406,7 @@ export default function RicePricePredictionChart() {
   return (
     <div className="space-y-8">
       {/* =========================================================== */}
-      {/* CARD 1 — Ringkasan SEMUA jenis beras, tanpa dropdown          */}
+      {/* CARD 1 — Summary of ALL rice types, no dropdown      */}
       {/* =========================================================== */}
       <Card className="overflow-hidden border-green-100 dark:border-green-900/40 shadow-sm">
         <CardHeader>
@@ -457,106 +421,21 @@ export default function RicePricePredictionChart() {
 
         <CardContent className="pt-1 space-y-1">
           {errorMsg && (
-            <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 text-sm text-amber-800 dark:text-amber-300">
-              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-              <span className="flex-1">{errorMsg}</span>
-              <button
-                type="button"
-                onClick={() => setRetryTick((t) => t + 1)}
-                className="shrink-0 text-xs font-medium underline hover:no-underline"
-              >
-                Coba Lagi
-              </button>
-            </div>
+            <ErrorBanner message={errorMsg} onRetry={() => setRetryTick((t) => t + 1)} />
           )}
 
           <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-            {allInfos.map((info) => {
-              const last = info.weekly[info.weekly.length - 1]?.avgPrice;
-              const pred = info.predictedAvg;
-              const delta = last && pred ? ((pred - last) / last) * 100 : undefined;
-              const tier = volatilityTier(info.historicalVolatility);
-              const TrendIcon =
-                delta === undefined ? Minus : delta > 0.05 ? TrendingUp : delta < -0.05 ? TrendingDown : Minus;
-              const trendColor =
-                delta === undefined
-                  ? "text-slate-400"
-                  : delta > 0.05
-                  ? "text-rose-600"
-                  : delta < -0.05
-                  ? "text-emerald-600"
-                  : "text-slate-400";
+            {allInfos.map((info) => (
+              <TypeSummaryCard key={info.type.id} info={info} loading={loading} />
+            ))}
 
-              return (
-                <div
-                  key={info.type.id}
-                  className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 p-4 space-y-2"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ backgroundColor: info.type.color }}
-                      />
-                      <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">
-                        {info.type.label}
-                      </span>
-                    </div>
-                    <span
-                      className={`text-[10px] font-medium px-2 py-0.5 rounded-full border shrink-0 ${tier.className}`}
-                    >
-                      {tier.label}
-                    </span>
-                  </div>
-
-                  <div className="flex items-end justify-between">
-                    <div>
-                      <p className="text-[11px] text-slate-400">Minggu Terakhir</p>
-                      <p className="text-base font-bold text-slate-800 dark:text-white">
-                        {formatRupiah(last)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[11px] text-slate-400">Prediksi Minggu Depan</p>
-                      <p className="text-base font-bold" style={{ color: info.type.colorPrediction }}>
-                        {loading ? (
-                          <Loader2 className="w-4 h-4 animate-spin inline text-slate-400" />
-                        ) : (
-                          formatRupiah(pred)
-                        )}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className={`flex items-center gap-1 text-xs font-medium ${trendColor}`}>
-                    <TrendIcon className="w-3.5 h-3.5" />
-                    {delta !== undefined ? `${delta > 0 ? "+" : ""}${delta.toFixed(2)}%` : "Menunggu prediksi…"}
-                    <span className="text-slate-400 font-normal ml-1">
-                      • Volatilitas {info.historicalVolatility.toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-
-            <div className="rounded-xl border border-dashed border-green-300 dark:border-green-800 bg-green-50/60 dark:bg-green-950/20 p-4 flex flex-col justify-center col-span-2 sm:col-span-3 lg:col-span-2">
-              <div className="flex items-center gap-2 text-green-700 dark:text-green-400 text-sm font-semibold">
-                <Activity className="w-4 h-4" />
-                Volatilitas Rata-rata
-              </div>
-              <p className="text-2xl font-bold text-green-700 dark:text-green-400 mt-1">
-                {avgVolatilityAll.toFixed(1)}%
-              </p>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Rata-rata koefisien variasi harga mingguan dari seluruh {allInfos.length} jenis beras.
-              </p>
-            </div>
+            <AverageVolatilityCard avg={avgVolatilityAll} count={allInfos.length} />
           </div>
         </CardContent>
       </Card>
 
       {/* =========================================================== */}
-      {/* CARD 2 — Grafik dengan dropdown pemilih line                  */}
+      {/* CARD 2 — Chart with the line picker dropdown                */}
       {/* =========================================================== */}
       <Card className="border-green-100 dark:border-green-900/40 shadow-sm">
         <CardHeader className="pb-3 relative z-10">
@@ -573,7 +452,7 @@ export default function RicePricePredictionChart() {
               </CardDescription>
             </div>
 
-            {/* --- Dropdown pemilih line chart --- */}
+            {/* --- Chart line picker dropdown --- */}
             <div className="relative shrink-0" ref={dropdownRef}>
               <button
                 type="button"
@@ -651,20 +530,7 @@ export default function RicePricePredictionChart() {
 
         <CardContent className="pt-2 space-y-4">
           {chartSelectedIds.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-10 text-center">
-              <Info className="w-6 h-6 text-slate-300 dark:text-slate-600" />
-              <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm">
-                Belum ada jenis beras yang dipilih. Buka dropdown di atas lalu pilih
-                minimal satu jenis untuk menampilkan grafik.
-              </p>
-              <button
-                type="button"
-                onClick={() => setChartSelectedIds(ALL_TYPE_IDS)}
-                className="text-xs font-medium text-green-700 dark:text-green-400 hover:underline cursor-pointer"
-              >
-                Pilih Semua Jenis
-              </button>
-            </div>
+            <ChartEmptyState onSelectAll={() => setChartSelectedIds(ALL_TYPE_IDS)} />
           ) : (
             <>
               <div className="h-[420px] md:h-[480px] w-full">
@@ -751,32 +617,12 @@ export default function RicePricePredictionChart() {
                 </ResponsiveContainer>
               </div>
 
-              {/* --- Legenda kustom --- */}
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs md:text-sm">
-                {chartInfos.map((info) => (
-                  <div key={info.type.id} className="flex items-center gap-2">
-                    <span className="w-6 h-0.5 rounded" style={{ backgroundColor: info.type.color }} />
-                    <span className="text-slate-600 dark:text-slate-300">{info.type.label}</span>
-                  </div>
-                ))}
-                <div className="flex items-center gap-2 text-slate-400 ml-auto">
-                  <span className="w-6 border-t-2 border-slate-400" />
-                  <span>Historis (mingguan)</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-400">
-                  <span
-                    className="w-6 border-t-2 border-dashed border-slate-400"
-                    style={{ display: "inline-block" }}
-                  />
-                  <span>Prediksi ({PREDICTION_WEEKS} minggu, LSTM Hybrid)</span>
-                </div>
-                {chartInfos.length > 1 && (
-                  <div className="flex items-center gap-1.5 text-slate-400">
-                    <Activity className="w-3.5 h-3.5" />
-                    Volatilitas rata-rata: {avgVolatilityChart.toFixed(1)}%
-                  </div>
-                )}
-              </div>
+              {/* --- Custom legend --- */}
+              <ChartLegend
+                infos={chartInfos}
+                avgVolatility={avgVolatilityChart}
+                predictionWeeks={PREDICTION_WEEKS}
+              />
 
               <p className="text-[11px] text-slate-400">
                 Data historis bersumber dari BI Harga Pangan (bi.go.id/hargapangan).
@@ -793,7 +639,7 @@ export default function RicePricePredictionChart() {
 }
 
 // ---------------------------------------------------------------------------
-// Tooltip kustom
+// Custom tooltip
 // ---------------------------------------------------------------------------
 
 function RiceTooltip({

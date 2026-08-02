@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Card,
   CardContent,
@@ -19,22 +19,22 @@ import {
 } from "@/components/ui/table";
 import { AlertTriangle, Download, Info } from "lucide-react";
 import { RICE_TYPES, fetchRicePriceByRange } from "@/lib/rice-price/api";
+import { formatRupiah } from "@/components/pages/compare-page/RicePriceChartParts";
 
 // ---------------------------------------------------------------------------
-// Konfigurasi
+// Configuration
 // ---------------------------------------------------------------------------
 
 const DEFAULT_RANGE_DAYS = 90;
 const DEBOUNCE_MS = 400;
-/** Tanggal terawal data historis yang tersedia di database */
+/** Earliest historical date available in the database */
 const MIN_DATE = "2020-01-01";
 
-interface HistoryRow {
-  date: string;
-  prices: Record<string, number>;
-}
+/** Shared className for the native date inputs */
+const DATE_INPUT_CLASS =
+  "h-9 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 text-sm text-slate-700 dark:text-slate-200 shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/30 dark:[color-scheme:dark]";
 
-/** Nama kolom CSV (snake_case, siap dibaca pandas) */
+/** CSV column names (snake_case, pandas-friendly) */
 const CSV_KEYS: Record<string, string> = {
   "bawah-1": "beras_bawah_i",
   "bawah-2": "beras_bawah_ii",
@@ -43,6 +43,15 @@ const CSV_KEYS: Record<string, string> = {
   "super-1": "beras_super_i",
   "super-2": "beras_super_ii",
 };
+
+interface HistoryRow {
+  date: string;
+  prices: Record<string, number>;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 const csvKey = (id: string) => CSV_KEYS[id] ?? id;
 
@@ -68,17 +77,32 @@ function formatDateCell(iso: string): string {
   });
 }
 
-const formatRupiah = (v: number) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(v);
-
 const shortLabel = (label: string) => label.replace(/^Beras Kualitas\s*/, "");
 
+/** Fetch daily prices for every rice type within the range, merged by date */
+async function fetchHistoryRows(from: string, to: string): Promise<HistoryRow[]> {
+  const results = await Promise.all(
+    RICE_TYPES.map(async (rt, idx) => {
+      const daily = await fetchRicePriceByRange(idx + 1, from, to);
+      return { id: rt.id, daily };
+    })
+  );
+  const mapByDate = new Map<string, HistoryRow>();
+  results.forEach((r) => {
+    r.daily.forEach((d) => {
+      let row = mapByDate.get(d.date);
+      if (!row) {
+        row = { date: d.date, prices: {} };
+        mapByDate.set(d.date, row);
+      }
+      row.prices[r.id] = d.price;
+    });
+  });
+  return Array.from(mapByDate.values()).sort((a, b) => (a.date < b.date ? -1 : 1));
+}
+
 // ---------------------------------------------------------------------------
-// Komponen
+// Component
 // ---------------------------------------------------------------------------
 
 export default function RicePriceHistoryTable() {
@@ -96,7 +120,7 @@ export default function RicePriceHistoryTable() {
 
   const dateValid = fromDate >= MIN_DATE && fromDate <= toDate;
 
-  // Debounce perubahan rentang tanggal (jeda mengetik 400ms)
+  // Debounce date range changes (400ms typing pause)
   useEffect(() => {
     if (!fromDate || !toDate || fromDate < MIN_DATE || fromDate > toDate) return;
     const t = setTimeout(() => {
@@ -106,45 +130,27 @@ export default function RicePriceHistoryTable() {
     return () => clearTimeout(t);
   }, [fromDate, toDate]);
 
-  // Ambil data historis untuk semua jenis beras pada rentang yang ter-apply
+  // Fetch historical data for all rice types within the applied range
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    async function load() {
-      try {
-        const promises = RICE_TYPES.map(async (rt, idx) => {
-          const daily = await fetchRicePriceByRange(idx + 1, appliedFrom, appliedTo);
-          return { id: rt.id, daily };
-        });
-        const results = await Promise.all(promises);
+    fetchHistoryRows(appliedFrom, appliedTo)
+      .then((result) => {
         if (cancelled) return;
-        const mapByDate = new Map<string, HistoryRow>();
-        results.forEach((r) => {
-          r.daily.forEach((d) => {
-            let row = mapByDate.get(d.date);
-            if (!row) {
-              row = { date: d.date, prices: {} };
-              mapByDate.set(d.date, row);
-            }
-            row.prices[r.id] = d.price;
-          });
-        });
-        setRows(
-          Array.from(mapByDate.values()).sort((a, b) => (a.date < b.date ? -1 : 1))
-        );
-      } catch (err) {
+        setRows(result);
+      })
+      .catch((err) => {
         if (cancelled) return;
         setRows([]);
         setError(
           "Gagal memuat tabel harga. " +
             (err instanceof Error ? err.message : "Terjadi kesalahan tak terduga.")
         );
-      } finally {
+      })
+      .finally(() => {
         if (!cancelled) setLoading(false);
-      }
-    }
-    load();
+      });
     return () => {
       cancelled = true;
     };
@@ -179,7 +185,7 @@ export default function RicePriceHistoryTable() {
       </CardHeader>
 
       <CardContent className="pt-1 space-y-4">
-        {/* Kontrol filter rentang tanggal */}
+        {/* Date range filter controls */}
         <div className="flex flex-wrap items-end gap-3">
           <div className="space-y-1">
             <label
@@ -195,7 +201,7 @@ export default function RicePriceHistoryTable() {
               min={MIN_DATE}
               max={toDate}
               onChange={(e) => setFromDate(e.target.value)}
-              className="h-9 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 text-sm text-slate-700 dark:text-slate-200 shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/30 dark:[color-scheme:dark]"
+              className={DATE_INPUT_CLASS}
             />
           </div>
           <div className="space-y-1">
@@ -212,7 +218,7 @@ export default function RicePriceHistoryTable() {
               min={fromDate}
               max={toISODate(today)}
               onChange={(e) => setToDate(e.target.value)}
-              className="h-9 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 text-sm text-slate-700 dark:text-slate-200 shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/30 dark:[color-scheme:dark]"
+              className={DATE_INPUT_CLASS}
             />
           </div>
           <Button
@@ -250,7 +256,7 @@ export default function RicePriceHistoryTable() {
           </div>
         )}
 
-        {/* Tabel historis (sticky header, scroll vertikal maks 480px) */}
+        {/* History table (sticky header, max 480px vertical scroll) */}
         <div className="relative max-h-[480px] overflow-auto rounded-lg border border-slate-200 dark:border-slate-700">
           <Table>
             <TableHeader className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-900">
