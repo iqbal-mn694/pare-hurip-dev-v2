@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const ML_API_BASE_URL =
-  process.env.ML_API_URL ?? "http://localhost:8000";
+import { ML_API_BASE_URL } from "@/lib/ml-api";
 
 export async function POST(request: NextRequest) {
   try {
