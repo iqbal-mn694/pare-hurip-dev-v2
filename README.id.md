@@ -1,8 +1,8 @@
-# KSA Produksi Padi — BPS Kota Tasikmalaya 🌾
+# Pare Hurip — Prediksi Fase Tanam KSA & Harga Beras (BPS Kota Tasikmalaya) 🌾
 
 🇬🇧 [English](README.md)
 
-> **Prediksi produksi padi dan analisis KSA (Kerangka Sampel Area) untuk BPS Kota Tasikmalaya** — pelacakan fase tanam, peta interaktif, dan perkiraan harga beras.
+> **Prediksi fase tanam berbasis KSA (Kerangka Sampel Area) dan perkiraan harga beras untuk BPS Kota Tasikmalaya** — pelacakan fase tanam, peta interaktif, dan perkiraan harga beras.
 
 ## ✨ Fitur Utama
 

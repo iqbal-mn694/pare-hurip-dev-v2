@@ -1,8 +1,8 @@
-# KSA Produksi Padi — BPS Kota Tasikmalaya 🌾
+# Pare Hurip — KSA Planting Phase & Rice Price Prediction (BPS Kota Tasikmalaya) 🌾
 
 🇮🇩 [Bahasa Indonesia](README.id.md)
 
-> **Rice production prediction and KSA (Kerangka Sampel Area) analysis for BPS Kota Tasikmalaya** — planting-phase tracking, interactive maps, and rice price forecasts.
+> **Planting-phase prediction based on KSA (Kerangka Sampel Area) and rice price forecasting for BPS Kota Tasikmalaya** — phase tracking, interactive maps, and rice price forecasts.
 
 ## ✨ Features
 
