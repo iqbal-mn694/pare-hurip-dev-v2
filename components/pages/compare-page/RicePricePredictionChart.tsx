@@ -560,7 +560,7 @@ export default function RicePricePredictionChart() {
                         const row = rows.find((r) => r.weekKey === key);
                         return row?.label ?? key;
                       }}
-                      stroke="hsl(var(--muted-foreground))"
+                      stroke="var(--muted-foreground)"
                       fontSize={isMobile ? 10 : 12}
                       minTickGap={isMobile ? 20 : 8}
                     />
@@ -568,7 +568,7 @@ export default function RicePricePredictionChart() {
                       tickFormatter={(v) => formatRupiah(v)}
                       domain={yDomain as [number, number]}
                       width={isMobile ? 64 : 95}
-                      stroke="hsl(var(--muted-foreground))"
+                      stroke="var(--muted-foreground)"
                       fontSize={isMobile ? 10 : 12}
                     />
                     <Tooltip content={<RiceTooltip infos={chartInfos} rangeLookup={rangeLookup} />} offset={isMobile ? 10 : 14} />
