@@ -1,7 +1,12 @@
-"use client";
+import type { Metadata } from "next";
+import RicePricePredictionChart from "@/components/pages/compare-page/RicePricePredictionChart";
+import RicePriceHistoryTable from "@/components/pages/compare-page/RicePriceHistoryTable";
 
-import RicePricePredictionChart from '@/components/pages/compare-page/RicePricePredictionChart';
-import RicePriceHistoryTable from '@/components/pages/compare-page/RicePriceHistoryTable';
+export const metadata: Metadata = {
+  title: "Prediksi Harga Beras — Pare Hurip",
+  description:
+    "Pantau grafik perkembangan dan prediksi harga beras mingguan di Kota Tasikmalaya berbasis machine learning (LSTM Hybrid).",
+};
 
 export default function Page() {
   return (

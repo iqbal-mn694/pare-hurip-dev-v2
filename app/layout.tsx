@@ -16,7 +16,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Prediksi KSA & Luas Panen Padi",
-  description: "by BPS Kota Tasikmalaya",
+  description:
+    "Sistem prediksi luas panen padi berbasis Kerangka Sampel Area (KSA) untuk Kota Tasikmalaya oleh BPS Kota Tasikmalaya.",
 };
 
 export default function RootLayout({
