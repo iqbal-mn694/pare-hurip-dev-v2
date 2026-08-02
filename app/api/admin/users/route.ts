@@ -144,6 +144,9 @@ export async function DELETE(request: Request) {
   if (!id) {
     return NextResponse.json({ error: "id wajib diisi." }, { status: 400 });
   }
+  if (id === actor.id) {
+    return NextResponse.json({ error: "Tidak dapat menghapus akun sendiri." }, { status: 400 });
+  }
 
   const admin = createAdminClient();
 

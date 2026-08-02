@@ -35,7 +35,7 @@ function formatDate(dateString: string) {
 // RoleBadge removed — role column no longer displayed in table.
 
 export default function AdminUsers() {
-  const { role: currentRole } = useAdminAuth();
+  const { id: currentUserId, role: currentRole } = useAdminAuth();
   const isSuperadmin = currentRole === "superadmin";
 
   const [users, setUsers] = React.useState<UserProfile[]>([]);
@@ -308,12 +308,14 @@ export default function AdminUsers() {
                       {isSuperadmin ? (
                         <TableCell>
                           <div className="flex flex-wrap gap-2">
-                            <Button variant="secondary" size="sm" onClick={() => openEdit(user)}>
+                            <Button variant="secondary" size="sm" onClick={() => openEdit(user)} className="max-md:h-10 max-md:w-10">
                               <UserCheck className="size-4" />
                             </Button>
-                            <Button variant="destructive" size="sm" onClick={() => handleDelete(user)}>
-                              <Trash2 className="size-4" />
-                            </Button>
+                            {user.id !== currentUserId ? (
+                              <Button variant="destructive" size="sm" onClick={() => handleDelete(user)} className="max-md:h-10 max-md:w-10">
+                                <Trash2 className="size-4" />
+                              </Button>
+                            ) : null}
                           </div>
                         </TableCell>
                       ) : null}
