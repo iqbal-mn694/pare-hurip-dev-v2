@@ -1,8 +1,8 @@
  "use client";
 
-import React from 'react';
-import Image from 'next/image';
-import { motion, Variants } from 'framer-motion';
+import React from "react";
+import Image from "next/image";
+import { motion, Variants } from "framer-motion";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -115,7 +115,7 @@ const SiklusTumbuhPadi = () => {
           className="w-full max-w-xs sm:max-w-xl md:max-w-3xl lg:max-w-5xl mx-auto"
         >
           <CarouselContent>
-            {growthCycleData.map((fase, index) => (
+            {growthCycleData.map((phase, index) => (
               <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
                 <motion.div
                   className="p-1 h-full"
@@ -124,18 +124,18 @@ const SiklusTumbuhPadi = () => {
                   <Card className="h-full flex flex-col shadow-lg hover:shadow-xl transition-shadow duration-300 group">
                     <div className="relative w-full h-48 overflow-hidden rounded-t-lg">
                       <Image
-                        src={fase.imageUrl}
-                        alt={`Gambar fase ${fase.title}`}
+                        src={phase.imageUrl}
+                        alt={`Gambar fase ${phase.title}`}
                         fill
-                        style={{ objectFit: 'cover' }}
+                        style={{ objectFit: "cover" }}
                         className="transform group-hover:scale-105 transition-transform duration-500"
                       />
                     </div>
                     <CardHeader>
-                      <CardTitle className="text-xl font-bold text-gray-800">{fase.title}</CardTitle>
+                      <CardTitle className="text-xl font-bold text-gray-800">{phase.title}</CardTitle>
                     </CardHeader>
                     <CardContent className="flex-grow">
-                      <p className="text-gray-600">{fase.description}</p>
+                      <p className="text-gray-600">{phase.description}</p>
                     </CardContent>
                   </Card>
                 </motion.div>

@@ -1,33 +1,33 @@
-'use client'
+"use client";
 
-import React from 'react';
-import { motion, useInView } from 'framer-motion';
-import { useRef } from 'react';
+import React from "react";
+import { motion, useInView } from "framer-motion";
+import { useRef } from "react";
 import {
-  CpuChipIcon,
-  ChartBarIcon,
-  SparklesIcon,
-} from '@heroicons/react/24/outline';
+  Cpu,
+  BarChart3,
+  Sparkles,
+} from "lucide-react";
 
-const Algoritma = () => {
+const Algorithm = () => {
   const features = [
     {
-      icon: <CpuChipIcon className="w-8 h-8 text-green-600" />,
-      title: 'Markov Chain & Random Forest',
-      desc: 'Kombinasi model statistik dan machine learning untuk memprediksi fase tumbuh padi (h+1, h+2, h+3 bulan). Markov Chain menghitung matriks transisi probabilistik antar fase, sementara Random Forest Classifier memanfaatkan fitur fase saat ini, fase sebelumnya, kecamatan, subsegmen, dan bulan dengan encoding sin/cos musiman untuk hasil yang lebih akurat.',
-      color: 'from-green-50 to-green-100',
+      icon: <Cpu className="w-8 h-8 text-green-600" />,
+      title: "Markov Chain & Random Forest",
+      desc: "Kombinasi model statistik dan machine learning untuk memprediksi fase tumbuh padi (h+1, h+2, h+3 bulan). Markov Chain menghitung matriks transisi probabilistik antar fase, sementara Random Forest Classifier memanfaatkan fitur fase saat ini, fase sebelumnya, kecamatan, subsegmen, dan bulan dengan encoding sin/cos musiman untuk hasil yang lebih akurat.",
+      color: "from-green-50 to-green-100",
     },
     {
-      icon: <ChartBarIcon className="w-8 h-8 text-blue-600" />,
-      title: 'LSTM Hybrid & Naive Baseline',
-      desc: 'Model deep learning LSTM yang memprediksi delta harga harian (bukan harga absolut), direkonstruksi menjadi proyeksi 30 hari ke depan, lalu di-blend secara adaptif dengan baseline naive (harga terakhir) berdasarkan volatilitas historis — semakin stabil harga, semakin besar bobot ke baseline; semakin volatil, semakin besar bobot ke LSTM. Hasil prediksi dibatasi (clipped) maksimal ±15% dari harga terakhir sebagai pengaman.',
-      color: 'from-blue-50 to-blue-100',
+      icon: <BarChart3 className="w-8 h-8 text-blue-600" />,
+      title: "LSTM Hybrid & Naive Baseline",
+      desc: "Model deep learning LSTM yang memprediksi delta harga harian (bukan harga absolut), direkonstruksi menjadi proyeksi 30 hari ke depan, lalu di-blend secara adaptif dengan baseline naive (harga terakhir) berdasarkan volatilitas historis — semakin stabil harga, semakin besar bobot ke baseline; semakin volatil, semakin besar bobot ke LSTM. Hasil prediksi dibatasi (clipped) maksimal ±15% dari harga terakhir sebagai pengaman.",
+      color: "from-blue-50 to-blue-100",
     },
     {
-      icon: <SparklesIcon className="w-8 h-8 text-amber-600" />,
-      title: 'Visualisasi Geospasial',
-      desc: 'Kombinasi algoritma prediktif dipadukan dengan pemetaan geospasial interaktif, memudahkan pemantauan real-time sawah pada wilayah kota tasikmalaya, berdasarkan hasil pola musim & siklus fase tanam padi.',
-      color: 'from-amber-50 to-amber-100',
+      icon: <Sparkles className="w-8 h-8 text-amber-600" />,
+      title: "Visualisasi Geospasial",
+      desc: "Kombinasi algoritma prediktif dipadukan dengan pemetaan geospasial interaktif, memudahkan pemantauan real-time sawah pada wilayah kota tasikmalaya, berdasarkan hasil pola musim & siklus fase tanam padi.",
+      color: "from-amber-50 to-amber-100",
     },
   ];
 
@@ -64,7 +64,7 @@ const Algoritma = () => {
         {/* Heading */}
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
-            Teknologi <span className="text-green-600">Machine Learning</span>{' '}
+            Teknologi <span className="text-green-600">Machine Learning</span>{" "}
             di Balik Prediksi
           </h2>
           <p className="mt-4 text-lg text-slate-600 max-w-3xl mx-auto">
@@ -81,7 +81,7 @@ const Algoritma = () => {
           className="grid gap-8 md:grid-cols-2 lg:grid-cols-3"
           variants={containerVariants}
           initial="hidden"
-          animate={isInView ? 'visible' : 'hidden'}
+          animate={isInView ? "visible" : "hidden"}
         >
           {features.map((item, idx) => (
             <motion.div
@@ -108,4 +108,4 @@ const Algoritma = () => {
   );
 };
 
-export default Algoritma;
+export default Algorithm;

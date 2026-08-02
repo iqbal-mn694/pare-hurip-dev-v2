@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export const sawahGeoJson: any = {
+export const riceFieldGeoJson: any = {
   type: "FeatureCollection",
   features: [
     {

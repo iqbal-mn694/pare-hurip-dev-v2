@@ -1,9 +1,9 @@
 "use client";
 
-import React from 'react';
-import Image from 'next/image';
-import { motion, type Variants } from 'framer-motion';
-import { FiDatabase, FiMap, FiBarChart, FiTrendingUp } from 'react-icons/fi';
+import React from "react";
+import Image from "next/image";
+import { motion, type Variants } from "framer-motion";
+import { FiDatabase, FiMap, FiBarChart, FiTrendingUp } from "react-icons/fi";
 
 const usesData = [
   {
@@ -24,7 +24,7 @@ const usesData = [
   {
     icon: <FiBarChart size={28} className="text-green-700" />,
     title: "Dukungan Kebijakan Ketahanan Pangan",
-    description: 'Mewujudkan visi negara (Sustainable Development Goals "Zero Hunger").',
+    description: "Mewujudkan visi negara (Sustainable Development Goals \"Zero Hunger\").",
   },
 ];
 
@@ -52,7 +52,7 @@ const Benefits = () => {
           viewport={{ once: false, amount: 0.2 }}
           variants={sectionVariants}
         >
-          {/* Gambar Utama */}
+          {/* Main Image */}
           <motion.div className="lg:w-2/5 w-full" variants={itemVariants}>
             <div className="relative h-96 lg:h-[500px] w-full rounded-lg shadow-2xl overflow-hidden">
               <Image
@@ -64,7 +64,7 @@ const Benefits = () => {
             </div>
           </motion.div>
 
-          {/* List Kegunaan */}
+          {/* Uses List */}
           <motion.div className="lg:w-3/5" variants={itemVariants}>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2 text-center lg:text-left">
               Kegunaan KSA

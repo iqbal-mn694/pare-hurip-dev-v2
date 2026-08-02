@@ -1,12 +1,12 @@
 "use client";
 
-import React from 'react';
-import Image from 'next/image';
-import { motion, type Variants } from 'framer-motion';
-import { FiGrid, FiMaximize, FiLock } from 'react-icons/fi';
+import React from "react";
+import Image from "next/image";
+import { motion, type Variants } from "framer-motion";
+import { FiGrid, FiMaximize, FiLock } from "react-icons/fi";
 
-// Data untuk kartu informasi berdasarkan gambar
-const metodeData = [
+// Data for the info cards based on the image
+const methodData = [
   {
     icon: <FiGrid size={24} className="text-green-700" />,
     text: "Satu Segmen terdiri dari 9 Subsegmen dengan total luas 9 hektar.",
@@ -21,8 +21,8 @@ const metodeData = [
   },
 ];
 
-const MetodeKsa = () => {
-  // Varian animasi untuk kontainer utama
+const KSAMethod = () => {
+  // Animation variants for the main container
   const containerVariants: Variants = {
     hidden: { opacity: 0, y: 50 },
     visible: {
@@ -36,20 +36,20 @@ const MetodeKsa = () => {
     }
   };
 
-  // Varian animasi untuk kolom teks
+  // Animation variants for the text column
   const textVariants: Variants = {
     hidden: { opacity: 0, x: -30 },
     visible: { opacity: 1, x: 0, transition: { duration: 0.5 } }
   };
 
-  // Varian animasi untuk kolom gambar
+  // Animation variants for the image column
   const imageVariants: Variants = {
     hidden: { opacity: 0, x: 30 },
     visible: { opacity: 1, x: 0, transition: { duration: 0.5 } }
   };
 
   return (
-    <section id="metode-ksa" className="py-20 bg-white">
+    <section id="method-ksa" className="py-20 bg-white">
       <motion.div
         className="container mx-auto px-6 max-w-6xl"
         variants={containerVariants}
@@ -58,15 +58,15 @@ const MetodeKsa = () => {
         viewport={{ once: false, amount: 0.3 }}
       >
         <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
-          {/* Kolom Gambar */}
+          {/* Image Column */}
           <motion.div 
             className="lg:w-1/2 w-full"
             variants={imageVariants}
           >
             <div className="relative w-full h-96 lg:h-[500px] shadow-xl rounded-lg overflow-hidden group">
               <Image
-                // Pastikan URL gambar ini dapat diakses secara publik. 
-                // Anda bisa mengunggahnya ke layanan seperti Imgur, Vercel Blob, atau menyimpannya di folder /public.
+                // Make sure this image URL is publicly accessible.
+                // You can upload it to a service like Imgur, Vercel Blob, or store it in the /public folder.
                 src="https://i.ibb.co.com/SwF0hxqp/Screenshot-2025-07-25-221613-2.png" 
                 alt="Diagram Metode KSA"
                 layout="fill"
@@ -76,7 +76,7 @@ const MetodeKsa = () => {
             </div>
           </motion.div>
 
-          {/* Kolom Teks & Kartu Informasi */}
+          {/* Text Column & Info Cards */}
           <motion.div className="lg:w-1/2 text-center lg:text-left" variants={textVariants}>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
               Metode KSA
@@ -86,13 +86,13 @@ const MetodeKsa = () => {
               Metode KSA merupakan pendekatan statistik spasial untuk mengestimasi luas panen dan produksi padi. Metode ini dikembangkan dengan dukungan FAO, USDA, dan Eurostat, lalu diterapkan oleh Badan Pusat Statistik (BPS) Indonesia sejak 2018. Dalam KSA, sebuah <strong>segmen</strong> adalah kumpulan sampel area pengamatan yang mewakili populasi sawah.
             </p>
             
-            {/* Kartu Informasi */}
+            {/* Info Cards */}
             <div className="space-y-4">
-              {metodeData.map((item, index) => (
+              {methodData.map((item, index) => (
                 <motion.div 
                   key={index} 
                   className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg shadow-md border-l-4 border-green-600 hover:shadow-lg transition-shadow duration-300"
-                  variants={textVariants} // Menggunakan varian yang sama untuk efek stagger
+                  variants={textVariants} // Reuse the same variant for the stagger effect
                 >
                   <div className="flex-shrink-0 bg-green-100 p-3 rounded-full">
                     {item.icon}
@@ -109,4 +109,4 @@ const MetodeKsa = () => {
   );
 };
 
-export default MetodeKsa;
+export default KSAMethod;

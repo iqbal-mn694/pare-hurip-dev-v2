@@ -1,10 +1,10 @@
 "use client";
 
-import React from 'react';
-import Image from 'next/image';
-import { motion, type Variants } from 'framer-motion';
+import React from "react";
+import Image from "next/image";
+import { motion, type Variants } from "framer-motion";
 
-const AboutKsa = () => {
+const AboutKSA = () => {
   const containerVariants: Variants = {
     hidden: { opacity: 0, y: 50 },
     visible: {
@@ -38,7 +38,7 @@ const AboutKsa = () => {
         viewport={{ once: false, amount: 0.3 }} 
       >
         <div className="flex flex-col md:flex-row items-center gap-10 md:gap-16">
-          {/* Kolom Teks */}
+          {/* Text Column */}
           <motion.div className="md:w-1/2 text-center md:text-left" variants={itemVariants}>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
               KSA itu Apa Sih?
@@ -49,7 +49,7 @@ const AboutKsa = () => {
             </p>
           </motion.div>
 
-          {/* Kolom Gambar */}
+          {/* Image Column */}
           <motion.div 
             className="md:w-1/2 w-full"
             variants={imageVariants}
@@ -70,4 +70,4 @@ const AboutKsa = () => {
   );
 };
 
-export default AboutKsa;
+export default AboutKSA;

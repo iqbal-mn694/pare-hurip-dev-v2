@@ -1,8 +1,8 @@
 "use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { motion, Variants, Transition } from 'framer-motion';
+import React from "react";
+import Link from "next/link";
+import { motion, Variants, Transition } from "framer-motion";
 
 interface HeroProps {
   heading: string;
@@ -27,7 +27,7 @@ const Hero: React.FC<HeroProps> = ({ heading, message }) => {
       y: 0,
       opacity: 1,
       transition: {
-        type: 'spring',
+        type: "spring",
         stiffness: 100,
       } as Transition,
     },
@@ -39,7 +39,7 @@ const Hero: React.FC<HeroProps> = ({ heading, message }) => {
       scale: 1,
       opacity: 1,
       transition: {
-        type: 'spring',
+        type: "spring",
         stiffness: 100,
         delay: 1.2,
       } as Transition,
@@ -58,8 +58,8 @@ const Hero: React.FC<HeroProps> = ({ heading, message }) => {
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
-          // PERUBAHAN DI SINI:
-          viewport={{ once: false, amount: 0.5 }} // Animasi akan berjalan setiap kali masuk viewport
+          // CHANGE HERE:
+          viewport={{ once: false, amount: 0.5 }} // Animation runs every time it enters the viewport
         >
           <div className="mt-10 text-center sm:ml-[10rem] sm:text-left max-w-[90%] sm:max-w-[800px]">
             <motion.h2
@@ -77,8 +77,8 @@ const Hero: React.FC<HeroProps> = ({ heading, message }) => {
             <motion.button className="px-4 py-2 sm:px-8 sm:py-2 border rounded-lg mt-4 cursor-pointer hover:bg-white/40 transition-colors duration-200"
               variants={buttonVariants}
             >
-              {/* Mengganti href ke ID yang ada di halaman, yaitu #visualisasi-interaktif */}
-              <Link href="/visualisasi-ksa">Analisis Terbaru Kami</Link>
+              {/* Replace href with the page's section ID, #visualisasi-interaktif */}
+              <Link href="/ksa-visualization">Analisis Terbaru Kami</Link>
             </motion.button>
           </div>
         </motion.div>

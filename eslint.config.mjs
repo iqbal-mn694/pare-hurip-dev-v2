@@ -11,6 +11,15 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    ignores: [".next/**", ".opencode/**"],
+  },
+  {
+    rules: {
+      "quotes": ["error", "double"],
+      "semi": ["error", "always"],
+    },
+  },
 ];
 
 export default eslintConfig;
