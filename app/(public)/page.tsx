@@ -7,15 +7,23 @@ import KSAMethod from "@/components/pages/landing-page/KSAMethod";
 import RiceGrowthCycle from "@/components/pages/landing-page/RiceGrowthCycle";
 
 export const metadata: Metadata = {
-  title: "Prediksi KSA & Luas Panen Padi — Pare Hurip",
-  description:
-    "Sistem prediksi luas panen padi berbasis Kerangka Sampel Area (KSA) untuk Kota Tasikmalaya oleh BPS Kota Tasikmalaya.",
+  title: "Prediksi Fase Tanam KSA & Harga Beras | BPS Kota Tasikmalaya",
+  description: "Sistem prediksi fase tanam berbasis Kerangka Sampel Area (KSA) dan analisis harga beras real-time di Kota Tasikmalaya oleh BPS Kota Tasikmalaya.",
+  keywords: [
+    "Beras Tasikmalaya",
+    "Prediksi Harga Beras",
+    "Fase Tanam KSA",
+    "BPS Kota Tasikmalaya",
+    "Kerangka Sampel Area",
+    "Pangan Tasikmalaya",
+    "Pertanian Tasikmalaya",
+  ],
 };
 
 const JSON_LD = {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  name: "Pare Hurip — Prediksi KSA & Luas Panen Padi",
+  name: "Pare Hurip — Prediksi Fase Tanam KSA & Harga Beras",
   description: metadata.description,
   provider: {
     "@type": "GovernmentOrganization",

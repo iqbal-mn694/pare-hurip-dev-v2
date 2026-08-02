@@ -15,8 +15,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Prediksi KSA & Luas Panen Padi",
-  description: "by BPS Kota Tasikmalaya",
+  title: "Prediksi Fase Tanam KSA & Harga Beras | BPS Kota Tasikmalaya",
+  description: "Sistem prediksi fase tanam berbasis Kerangka Sampel Area (KSA) dan analisis harga beras real-time di Kota Tasikmalaya oleh BPS Kota Tasikmalaya.",
+  keywords: [
+    "Beras Tasikmalaya",
+    "Prediksi Harga Beras",
+    "Fase Tanam KSA",
+    "BPS Kota Tasikmalaya",
+    "Kerangka Sampel Area",
+    "Pangan Tasikmalaya",
+    "Pertanian Tasikmalaya",
+  ],
 };
 
 export default function PublicLayout({
