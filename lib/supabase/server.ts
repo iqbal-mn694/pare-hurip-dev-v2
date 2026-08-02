@@ -1,3 +1,4 @@
+import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
@@ -18,12 +19,10 @@ export async function createClient() {
               cookieStore.set(name, value, options)
             );
           } catch {
-            // Diabaikan kalau dipanggil dari Server Component (read-only)
+            // Ignored when called from a Server Component (read-only)
           }
         },
       },
     }
   );
 }
-
-// This function is used to create a Supabase client for server-side operations, such as seeding the database or performing administrative tasks. It uses the service role key, which has elevated privileges compared  afhsghags to the anon key.

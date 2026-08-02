@@ -19,31 +19,37 @@ import { AlertCircle } from "lucide-react";
 
 import { supabase } from "@/lib/supabase/client";
 import {
-  kecamatanMap,
+  districtMap,
   getPhaseColor,
-  getSawahPhaseColor,
-  getModus,
+  getRiceFieldPhaseColor,
+  getMode,
   displayOrder,
-} from "@/lib/utils";
+} from "@/lib/planting-phase/constants";
 import { tasikmalayaGeoJson } from "@/lib/tasikmalaya-geojson";
-import { sawahGeoJson } from "@/lib/bpn-sawah-geojson";
+import { riceFieldGeoJson } from "@/lib/ricefield-geojson";
 
-const KecamatanMapDynamic = dynamic(() => import("@/components/KecamatanMap"), {
-  ssr: false,
-  loading: () => (
-    <div className="h-[500px] w-full rounded-lg bg-slate-100 animate-pulse" aria-hidden="true" />
-  ),
-});
+const DistrictMapDynamic = dynamic(
+  () => import("@/components/pages/prediction-page/DistrictMap"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[500px] w-full rounded-lg bg-slate-100 animate-pulse" aria-hidden="true" />
+    ),
+  }
+);
 
-const TasikCityMapDynamic = dynamic(() => import("@/components/TasikCityMap"), {
-  ssr: false,
-  loading: () => (
-    <div className="h-[500px] w-full rounded-lg bg-slate-100 animate-pulse" aria-hidden="true" />
-  ),
-});
+const TasikmalayaCityMapDynamic = dynamic(
+  () => import("@/components/pages/prediction-page/TasikmalayaCityMap"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[500px] w-full rounded-lg bg-slate-100 animate-pulse" aria-hidden="true" />
+    ),
+  }
+);
 
-function formatMonthLabel(periode: string): string {
-  const [year, month] = periode.split("-").map(Number);
+function formatMonthLabel(period: string): string {
+  const [year, month] = period.split("-").map(Number);
   const names = [
     "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
     "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
@@ -51,7 +57,7 @@ function formatMonthLabel(periode: string): string {
   return `${names[month - 1]} ${year}`;
 }
 
-// Legenda warna fase (swatch persegi) yang dipakai di bawah peta.
+// Phase color legend (square swatches) used below the map.
 const PHASE_LEGEND: { value: number; label: string }[] = [
   { value: 1, label: "Vegetatif 1" },
   { value: 2, label: "Vegetatif 2" },
@@ -71,7 +77,7 @@ function snapPhase(raw: string): number {
   );
 }
 
-export default function FaseTanamMap() {
+export default function PlantingPhaseMap() {
   const [data, setData] = useState<any[] | null>(null);
   const [months, setMonths] = useState<string[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>("");
@@ -82,14 +88,14 @@ export default function FaseTanamMap() {
     async function fetchData() {
       setLoading(true);
       try {
-        // Fetch paralel per kecamatan — PostgREST memotong query global
-        // di 1.000 baris, sedangkan per kecamatan ±650 baris (< batas),
-        // sehingga seluruh periode 2024–2026 termuat.
-        const queries = Object.entries(kecamatanMap).map(async ([kode, nama]) => {
+        // Fetch in parallel per district — PostgREST truncates a global
+        // query at 1,000 rows, whereas per-district it's ±650 rows (< limit),
+        // so the entire 2024–2026 period is loaded.
+        const queries = Object.entries(districtMap).map(async ([code, name]) => {
           const { data, error } = await supabase
             .from("data_ksa")
             .select("segment_id, subsegment, periode, phase")
-            .like("segment_id", `${kode}%`)
+            .like("segment_id", `${code}%`)
             .not("phase", "like", "7.%")
             .neq("phase", "8")
             .order("periode", { ascending: true });
@@ -98,30 +104,30 @@ export default function FaseTanamMap() {
             throw new Error("Gagal memuat data fase dari database.");
           }
 
-          return { nama, rows: (data ?? []) as any[] };
+          return { name, rows: (data ?? []) as any[] };
         });
 
         const results = await Promise.all(queries);
 
         const result: any[] = [];
-        const allPeriodes = new Set<string>();
+        const allPeriods = new Set<string>();
 
-        for (const { nama, rows } of results) {
-          const byPeriode = new Map<string, string[]>();
+        for (const { name, rows } of results) {
+          const byPeriod = new Map<string, string[]>();
           for (const row of rows) {
-            const list = byPeriode.get(row.periode) ?? [];
+            const list = byPeriod.get(row.periode) ?? [];
             list.push(row.phase);
-            byPeriode.set(row.periode, list);
-            allPeriodes.add(row.periode);
+            byPeriod.set(row.periode, list);
+            allPeriods.add(row.periode);
           }
-          const entry: any = { kecamatan: nama };
-          for (const [periode, phases] of byPeriode) {
-            entry[periode] = snapPhase(getModus(phases));
+          const entry: any = { district: name };
+          for (const [period, phases] of byPeriod) {
+            entry[period] = snapPhase(getMode(phases) ?? "");
           }
           result.push(entry);
         }
 
-        const sortedMonths = [...allPeriodes].sort();
+        const sortedMonths = [...allPeriods].sort();
         setData(result);
         setMonths(sortedMonths);
         if (sortedMonths.length > 0) {
@@ -213,9 +219,9 @@ export default function FaseTanamMap() {
             <p className="text-sm text-muted-foreground">
               Fase tanam dominan per kecamatan untuk bulan yang dipilih.
             </p>
-            <TasikCityMapDynamic
-              geoJsonKecamatan={tasikmalayaGeoJson}
-              dataFase={data}
+            <TasikmalayaCityMapDynamic
+              geoJsonDistrict={tasikmalayaGeoJson}
+              phaseData={data}
               phaseColorMapping={getPhaseColor}
               selectedMonth={selectedMonth}
             />
@@ -224,12 +230,12 @@ export default function FaseTanamMap() {
             <p className="text-sm text-muted-foreground">
               Sebaran per petak sawah untuk bulan yang dipilih.
             </p>
-            <KecamatanMapDynamic
-              geoJsonKecamatan={tasikmalayaGeoJson}
-              geoJsonSawah={sawahGeoJson}
-              dataFase={data}
+            <DistrictMapDynamic
+              geoJsonDistrict={tasikmalayaGeoJson}
+              geoJsonRiceField={riceFieldGeoJson}
+              phaseData={data}
               selectedMonth={selectedMonth}
-              phaseColorMapping={getSawahPhaseColor}
+              phaseColorMapping={getRiceFieldPhaseColor}
             />
           </div>
         </div>

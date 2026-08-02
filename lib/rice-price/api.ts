@@ -1,33 +1,34 @@
 /**
- * Modul data & API untuk grafik "Prediksi Harga Beras Mingguan".
+ * Data & API module for the "Weekly Rice Price Prediction" chart.
  *
- * Model ML (LSTM Hybrid) yang sebenarnya memprediksi harga secara HARIAN.
- * Di sisi frontend, data harian tersebut (baik historis maupun hasil
- * prediksi) diagregasi menjadi rata-rata MINGGUAN untuk ditampilkan di
- * grafik, supaya lebih ringkas dan mudah dibaca.
+ * The ML model (LSTM Hybrid) actually predicts prices DAILY.
+ * On the frontend side, those daily values (both historical and
+ * predicted) are aggregated into WEEKLY averages for the chart,
+ * making it more compact and readable.
  *
- * Sumber data:
- * - Historis  -> dari tabel `rice_prices` di Supabase (database).
- * - Prediksi  -> di-proxy lewat Next.js API route `/api/v1/rice-price/predict/batch`,
- *   yang di baliknya manggil service ML lokal (`ml-pare-hurip`), endpoint
- *   `/api/v1/lstm-hybrid-price/predict/batch`. Selalu dipanggil batch untuk
- *   SEMUA jenis beras sekaligus (dipakai Card ringkasan); Card grafik cuma
- *   memfilter hasil ini, tidak fetch ulang per jenis.
+ * Data sources:
+ * - History    -> from the `rice_prices` table in Supabase (database).
+ * - Prediction -> proxied through the Next.js API route
+ *   `/api/v1/rice-price/predict/batch`, which calls the local ML service
+ *   (`ml-pare-hurip`), endpoint `/api/v1/lstm-hybrid-price/predict/batch`.
+ *   Always called in batch for ALL rice types at once (used by the summary
+ *   card); the chart card just filters these results, it doesn't re-fetch
+ *   per type.
  */
 
 import { supabase } from "@/lib/supabase/client";
 
 // ---------------------------------------------------------------------------
-// 1. Jenis beras
+// 1. Rice types
 // ---------------------------------------------------------------------------
 
 export interface RiceTypeOption {
   id: string;
-  /** Nama persis yang dikirim ke API (`rice_type`) */
+  /** Exact name sent to the API (`rice_type`) */
   label: string;
-  /** Warna identitas garis (historis, solid) */
+  /** Line identity color (history, solid) */
   color: string;
-  /** Warna identitas garis (prediksi, sedikit lebih terang) */
+  /** Line identity color (prediction, slightly lighter) */
   colorPrediction: string;
 }
 
@@ -40,15 +41,12 @@ export const RICE_TYPES: RiceTypeOption[] = [
   { id: "super-2", label: "Beras Kualitas Super II", color: "#7c3aed", colorPrediction: "#a78bfa" },
 ];
 
-export const getRiceTypeById = (id: string): RiceTypeOption | undefined =>
-  RICE_TYPES.find((r) => r.id === id);
-
 export interface DailyPricePoint {
   date: string;
   price: number;
   /**
-   * Opsional — hanya diisi bila API prediksi mengirimkannya.
-   * Tidak pernah difabrikasi oleh frontend.
+   * Optional — only set when the prediction API sends it.
+   * Never fabricated by the frontend.
    */
   confidence?: number;
 }
@@ -76,7 +74,7 @@ export async function fetchRicePriceHistory(
   }));
 }
 
-/** Ambil riwayat harga harian pada rentang tanggal tertentu (inklusif) */
+/** Fetch daily price history within a given date range (inclusive) */
 export async function fetchRicePriceByRange(
   riceTypeId: number,
   fromDate: string,
@@ -103,24 +101,24 @@ export async function fetchRicePriceByRange(
 }
 
 // ---------------------------------------------------------------------------
-// 3. Agregasi harian -> mingguan
+// 3. Daily -> weekly aggregation
 // ---------------------------------------------------------------------------
 
 export interface WeeklyPoint {
-  weekKey: string; // identitas unik urutan minggu, dipakai sebagai kategori X
-  label: string; // label pendek ditampilkan di sumbu X
-  rangeLabel: string; // label lengkap "13 - 19 Jul 2026" untuk tooltip
+  weekKey: string; // unique week identifier, used as the X category
+  label: string; // short label shown on the X axis
+  rangeLabel: string; // full label "13 - 19 Jul 2026" for the tooltip
   startDate: string;
   endDate: string;
   avgPrice: number;
-  /** Rata-rata keyakinan harian (bila seluruh hari dalam minggu memilikinya) */
+  /** Average daily confidence (when every day in the week has it) */
   confidence?: number;
 }
 
 const DATE_FMT = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short" });
 const DATE_FMT_YEAR = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" });
 
-/** Kelompokkan data harian (urut kronologis) menjadi bucket 7-harian */
+/** Group daily data (chronological) into 7-day buckets */
 export function aggregateWeekly(daily: DailyPricePoint[], keyPrefix = "w"): WeeklyPoint[] {
   const weeks: WeeklyPoint[] = [];
   for (let i = 0; i < daily.length; i += 7) {
@@ -147,7 +145,7 @@ export function aggregateWeekly(daily: DailyPricePoint[], keyPrefix = "w"): Week
   return weeks;
 }
 
-/** Koefisien variasi (stdev / mean) dalam persen — dipakai sebagai ukuran volatilitas historis */
+/** Coefficient of variation (stdev / mean) in percent — used as a historical volatility measure */
 export function computeVolatility(values: number[]): number {
   if (values.length < 2) return 0;
   const mean = values.reduce((a, b) => a + b, 0) / values.length;
@@ -159,24 +157,23 @@ export function computeVolatility(values: number[]): number {
 }
 
 // ---------------------------------------------------------------------------
-// 4. Client API prediksi (LSTM Hybrid) — diproxy lewat Next.js API route
+// 4. Prediction API client (LSTM Hybrid) — proxied via a Next.js API route
 // ---------------------------------------------------------------------------
 
 /**
- * Base URL ML API HANYA dipakai server-side (di dalam API route Next.js).
- * Browser tidak pernah manggil ini langsung lagi — makanya tidak perlu
- * NEXT_PUBLIC_ dan tidak akan kena CORS.
+ * ML API base URL is ONLY used server-side (inside the Next.js API route).
+ * The browser never calls this directly anymore — that's why it doesn't
+ * need NEXT_PUBLIC_ and won't hit CORS.
  */
-export const ML_API_BASE_URL =
-  process.env.ML_API_URL ?? "http://localhost:8000";
+export { ML_API_BASE_URL } from "@/lib/ml-api";
 
-/** Path proxy same-origin di sisi Next.js (lihat app/api/v1/rice-price/predict/batch/route.ts) */
+/** Same-origin proxy path on the Next.js side (see app/api/v1/rice-price/predict/batch/route.ts) */
 const PROXY_BATCH_PATH = "/api/v1/rice-price/predict/batch";
 
 export interface PricePredictionPoint {
   target_date: string;
   predicted_price: number;
-  /** Opsional — hanya diisi bila API prediksi mengirimkannya (defensif, tidak difabrikasi) */
+  /** Optional — only set when the prediction API sends it (defensive, not fabricated) */
   confidence?: number;
 }
 
@@ -203,18 +200,18 @@ interface PredictBatchResponse {
   results: RicePricePredictionResult[];
 }
 
-/** Cache hasil prediksi per (rice_type, tanggal data terakhir).
- *  Invalisi otomatis saat tanggal data terakhir berubah (data baru masuk). */
+/** Cache prediction results per (rice_type, last data date).
+ *  Auto-invalidated when the last data date changes (new data arrives). */
 const pricePredictionCache = new Map<string, RicePricePredictionResult>();
 const PRICE_PREDICTION_CACHE_MAX = 200;
 
 /**
- * Ambil prediksi untuk satu atau lebih jenis beras. Selalu lewat endpoint
- * batch (walau cuma 1 item) — endpoint single non-batch tidak dipakai lagi
- * karena pemanggil (RicePricePredictionChart) selalu mengirim seluruh
- * RICE_TYPES sekaligus dalam satu request.
- * Hasil di-cache per (rice_type, last_price_date) sehingga kunjungan ulang
- * dengan data yang sama tidak memanggil service ML lagi.
+ * Fetch predictions for one or more rice types. Always goes through the
+ * batch endpoint (even for 1 item) — the single non-batch endpoint is no
+ * longer used because the caller (RicePricePredictionChart) always sends
+ * all RICE_TYPES at once in one request.
+ * Results are cached per (rice_type, last_price_date) so revisits with
+ * the same data don't call the ML service again.
  */
 export async function predictRicePrices(
   items: PredictSingleRequest[]
@@ -223,7 +220,7 @@ export async function predictRicePrices(
 
   const keys = items.map((item) => `${item.rice_type}|${item.last_price_date}`);
 
-  // Semua item ter-cache -> langsung kembalikan hasil sesuai urutan request.
+  // All items cached -> return results directly in request order.
   if (keys.every((key) => pricePredictionCache.has(key))) {
     return keys.map((key) => pricePredictionCache.get(key)!);
   }
@@ -246,7 +243,7 @@ export async function predictRicePrices(
     pricePredictionCache.clear();
   }
   results.forEach((r, idx) => {
-    // Simpan dengan key yang sama dengan lookup (dari item request).
+    // Store with the same key used for lookup (from the request item).
     pricePredictionCache.set(keys[idx] ?? `${r.rice_type}|${r.last_known_date}`, r);
   });
 
