@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase/client";
 import { showRouteTransition } from "@/lib/route-transition";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext";
 
 const navItems = [
@@ -226,6 +227,7 @@ const openLogoutConfirm = React.useCallback(() => {
               </div>
 
               <div className="relative flex items-center gap-3">
+                <ThemeToggle />
                 <button
                   type="button"
                   onClick={() => setProfileMenuOpen((value) => !value)}
@@ -256,7 +258,7 @@ const openLogoutConfirm = React.useCallback(() => {
                     <button
                       type="button"
                       onClick={openLogoutConfirm}
-                      className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm font-medium text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950/30"
+                      className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm font-medium text-red-600 dark:text-red-400 transition hover:bg-red-50 dark:hover:bg-red-950/30"
                     >
                       <LogOut className="size-4" />
                       <span>Logout</span>

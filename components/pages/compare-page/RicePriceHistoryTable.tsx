@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -106,17 +106,27 @@ async function fetchHistoryRows(from: string, to: string): Promise<HistoryRow[]>
 // ---------------------------------------------------------------------------
 
 export default function RicePriceHistoryTable() {
-  const today = useMemo(() => new Date(), []);
-  const [fromDate, setFromDate] = useState(() =>
-    toISODate(addDays(today, -DEFAULT_RANGE_DAYS))
-  );
-  const [toDate, setToDate] = useState(() => toISODate(today));
-  const [appliedFrom, setAppliedFrom] = useState(fromDate);
-  const [appliedTo, setAppliedTo] = useState(toDate);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [appliedFrom, setAppliedFrom] = useState("");
+  const [appliedTo, setAppliedTo] = useState("");
+  const [maxDate, setMaxDate] = useState("");
 
   const [rows, setRows] = useState<HistoryRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Initialize the date range on mount (avoids SSR/client hydration mismatch).
+  useEffect(() => {
+    const today = new Date();
+    const from = toISODate(addDays(today, -DEFAULT_RANGE_DAYS));
+    const to = toISODate(today);
+    setFromDate(from);
+    setToDate(to);
+    setAppliedFrom(from);
+    setAppliedTo(to);
+    setMaxDate(to);
+  }, []);
 
   const dateValid = fromDate >= MIN_DATE && fromDate <= toDate;
 
@@ -216,7 +226,7 @@ export default function RicePriceHistoryTable() {
               type="date"
               value={toDate}
               min={fromDate}
-              max={toISODate(today)}
+              max={maxDate}
               onChange={(e) => setToDate(e.target.value)}
               className={DATE_INPUT_CLASS}
             />
@@ -232,7 +242,7 @@ export default function RicePriceHistoryTable() {
             Unduh CSV
           </Button>
           {!loading && rows.length > 0 && (
-            <span className="text-xs text-slate-400 pb-1.5">
+            <span className="text-xs text-slate-400 pb-1.5 dark:text-slate-500">
               {rows.length} hari data
             </span>
           )}
@@ -294,7 +304,7 @@ export default function RicePriceHistoryTable() {
                     colSpan={RICE_TYPES.length + 1}
                     className="px-3 py-10 text-center"
                   >
-                    <div className="flex flex-col items-center gap-2 text-slate-400">
+                    <div className="flex flex-col items-center gap-2 text-slate-400 dark:text-slate-500">
                       <Info className="w-5 h-5" />
                       <span className="text-sm">
                         Tidak ada data harga pada rentang tanggal tersebut.
@@ -328,7 +338,7 @@ export default function RicePriceHistoryTable() {
           </Table>
         </div>
 
-        <p className="text-[11px] text-slate-400">
+        <p className="text-[11px] text-slate-400 dark:text-slate-500">
           Sumber data: BI Harga Pangan (bi.go.id/hargapangan).
         </p>
       </CardContent>

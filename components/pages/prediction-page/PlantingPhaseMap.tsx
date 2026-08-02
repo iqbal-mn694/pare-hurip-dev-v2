@@ -33,7 +33,7 @@ const DistrictMapDynamic = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-[500px] w-full rounded-lg bg-slate-100 animate-pulse" aria-hidden="true" />
+      <div className="h-[500px] w-full rounded-lg bg-slate-100 animate-pulse dark:bg-slate-800" aria-hidden="true" />
     ),
   }
 );
@@ -43,7 +43,7 @@ const TasikmalayaCityMapDynamic = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-[500px] w-full rounded-lg bg-slate-100 animate-pulse" aria-hidden="true" />
+      <div className="h-[500px] w-full rounded-lg bg-slate-100 animate-pulse dark:bg-slate-800" aria-hidden="true" />
     ),
   }
 );
@@ -148,9 +148,9 @@ export default function PlantingPhaseMap() {
     return (
       <Card>
         <CardContent className="py-12 space-y-3">
-          <div className="h-4 w-56 bg-slate-200 rounded animate-pulse" />
-          <div className="h-4 w-full max-w-80 bg-slate-200 rounded animate-pulse" />
-          <div className="h-[500px] w-full bg-slate-100 rounded-lg animate-pulse mt-2" />
+          <div className="h-4 w-56 bg-slate-200 rounded animate-pulse dark:bg-slate-700" />
+          <div className="h-4 w-full max-w-80 bg-slate-200 rounded animate-pulse dark:bg-slate-700" />
+          <div className="h-[500px] w-full bg-slate-100 rounded-lg animate-pulse mt-2 dark:bg-slate-800" />
         </CardContent>
       </Card>
     );
@@ -189,10 +189,10 @@ export default function PlantingPhaseMap() {
   return (
     <>
       <div className="text-center mb-8">
-        <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
-          Peta <span className="text-green-600">Sebaran</span> Fase Tanam
+        <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-slate-100">
+          Peta <span className="text-green-600 dark:text-green-400">Sebaran</span> Fase Tanam
         </h2>
-        <p className="mt-4 text-lg text-slate-600 max-w-3xl mx-auto">
+        <p className="mt-4 text-lg text-slate-600 dark:text-slate-300 max-w-3xl mx-auto">
           Lihat sebaran fase tanam dominan per kecamatan dan per petak sawah
           untuk bulan yang dipilih.
         </p>

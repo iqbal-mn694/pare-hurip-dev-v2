@@ -80,7 +80,7 @@ const SiklusTumbuhPadi = () => {
   };
 
   return (
-    <section id="siklus-padi" className="py-20 bg-gray-50 overflow-x-hidden">
+    <section id="siklus-padi" className="py-20 bg-gray-50 dark:bg-slate-900 overflow-x-hidden">
       <motion.div
         className="container mx-auto px-6 max-w-6xl"
         variants={containerVariants}
@@ -91,13 +91,13 @@ const SiklusTumbuhPadi = () => {
         <div className="text-center mb-12">
           <motion.h2
             variants={itemVariants}
-            className="text-3xl md:text-4xl font-bold text-gray-800 mb-4"
+            className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-slate-100 mb-4"
           >
             Siklus Pertumbuhan Padi
           </motion.h2>
           <motion.p
             variants={itemVariants}
-            className="text-lg text-gray-600 max-w-3xl mx-auto"
+            className="text-lg text-gray-600 dark:text-slate-300 max-w-3xl mx-auto"
           >
             Kenali setiap fase dalam siklus hidup padi, dari persiapan lahan hingga masa panen yang menentukan.
           </motion.p>
@@ -122,7 +122,7 @@ const SiklusTumbuhPadi = () => {
                   variants={itemVariants}
                 >
                   <Card className="h-full flex flex-col shadow-lg hover:shadow-xl transition-shadow duration-300 group">
-                    <div className="relative w-full h-48 overflow-hidden rounded-t-lg">
+                    <div className="relative w-full h-48 overflow-hidden rounded-t-lg bg-slate-100 dark:bg-slate-800">
                       <Image
                         src={phase.imageUrl}
                         alt={`Gambar fase ${phase.title}`}
@@ -132,10 +132,10 @@ const SiklusTumbuhPadi = () => {
                       />
                     </div>
                     <CardHeader>
-                      <CardTitle className="text-xl font-bold text-gray-800">{phase.title}</CardTitle>
+                      <CardTitle className="text-xl font-bold text-gray-800 dark:text-slate-100">{phase.title}</CardTitle>
                     </CardHeader>
                     <CardContent className="flex-grow">
-                      <p className="text-gray-600">{phase.description}</p>
+                      <p className="text-gray-600 dark:text-slate-400">{phase.description}</p>
                     </CardContent>
                   </Card>
                 </motion.div>

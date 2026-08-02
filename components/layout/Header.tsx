@@ -5,11 +5,14 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation"; 
 import { AiOutlineMenu, AiOutlineClose } from "react-icons/ai";
+import { useTheme } from "@/lib/theme-context";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const Header = () => {
   const [nav, setNav] = useState(false);
   const [color, setColor] = useState("transparent");
   const [textColor, setTextColor] = useState("white");
+  const { resolvedTheme } = useTheme();
 
   const pathname = usePathname(); 
 
@@ -23,12 +26,15 @@ const Header = () => {
   };
 
   useEffect(() => {
+    const isDark = resolvedTheme === "dark";
+    const scrolledBg = isDark ? "#0e1510" : "#ffffff";
+    const scrolledText = isDark ? "#edf2ec" : "#000000";
     
     if (pathname === "/") {
       const changeColor = () => {
         if (window.scrollY >= 90) {
-          setColor("#ffffff");
-          setTextColor("#000000");
+          setColor(scrolledBg);
+          setTextColor(scrolledText);
         } else {
           setColor("transparent");
           setTextColor("#ffffff");
@@ -42,10 +48,10 @@ const Header = () => {
       return () => window.removeEventListener("scroll", changeColor);
     } else {
 
-      setColor("#ffffff");
-      setTextColor("#000000");
+      setColor(scrolledBg);
+      setTextColor(scrolledText);
     }
-  }, [pathname]); 
+  }, [pathname, resolvedTheme]); 
 
   return (
     <div
@@ -71,55 +77,57 @@ const Header = () => {
           </div>
         </Link>
 
-        {/* Desktop Navigation */}
-        <ul
-          style={{ color: `${textColor}` }}
-          className="hidden sm:flex font-semibold space-x-4 items-center"
-        >
-          {/* Use section IDs for navigation on the home page */}
-          <li className="p-2 hover:text-green-600 transition-colors duration-200">
-            <Link
-              href="/#about-ksa"
-              className={`border-b-2 pb-1 transition-all duration-200 ${
-                isActive("/#about-ksa")
-                  ? "border-green-600"
-                  : "border-transparent"
-              }`}
-            >
-              Beranda
-            </Link>
-          </li>
-          <li className="p-2 hover:text-green-600 transition-colors duration-200">
-            <Link
-              href="/ksa-visualization"
-              className={`border-b-2 pb-1 transition-all duration-200 ${
-                isActive("/ksa-visualization")
-                  ? "border-green-600"
-                  : "border-transparent"
-              }`}
-            >
-              Fase Tanam
-            </Link>
-          </li>
-          <li className="p-2 hover:text-green-600 transition-colors duration-200">
-            <Link
-              href="/compare"
-              className={`border-b-2 pb-1 transition-all duration-200 ${
-                isActive("/compare") ? "border-green-600" : "border-transparent"
-              }`}
-            >
-              Harga Beras
-            </Link>
-          </li>
-        </ul>
+        {/* Desktop Navigation + theme toggle */}
+        <div className="flex items-center gap-2">
+          <ul
+            style={{ color: `${textColor}` }}
+            className="hidden sm:flex font-semibold space-x-4 items-center"
+          >
+            {/* Use section IDs for navigation on the home page */}
+            <li className="p-2 hover:text-green-600 transition-colors duration-200">
+              <Link
+                href="/#about-ksa"
+                className={`border-b-2 pb-1 transition-all duration-200 ${
+                  isActive("/#about-ksa")
+                    ? "border-green-600"
+                    : "border-transparent"
+                }`}
+              >
+                Beranda
+              </Link>
+            </li>
+            <li className="p-2 hover:text-green-600 transition-colors duration-200">
+              <Link
+                href="/ksa-visualization"
+                className={`border-b-2 pb-1 transition-all duration-200 ${
+                  isActive("/ksa-visualization")
+                    ? "border-green-600"
+                    : "border-transparent"
+                }`}
+              >
+                Fase Tanam
+              </Link>
+            </li>
+            <li className="p-2 hover:text-green-600 transition-colors duration-200">
+              <Link
+                href="/compare"
+                className={`border-b-2 pb-1 transition-all duration-200 ${
+                  isActive("/compare") ? "border-green-600" : "border-transparent"
+                }`}
+              >
+                Harga Beras
+              </Link>
+            </li>
+          </ul>
 
-        {/* Mobile Hamburger */}
-        <div className="sm:hidden z-20 p-2" onClick={handleNav}>
-          {nav ? (
-            <AiOutlineClose size={28} style={{ color: textColor }} />
-          ) : (
-            <AiOutlineMenu size={28} style={{ color: textColor }} />
-          )}
+          <ThemeToggle />
+          <div className="sm:hidden z-20 p-2" onClick={handleNav}>
+            {nav ? (
+              <AiOutlineClose size={28} style={{ color: textColor }} />
+            ) : (
+              <AiOutlineMenu size={28} style={{ color: textColor }} />
+            )}
+          </div>
         </div>
 
         {/* Mobile Menu */}

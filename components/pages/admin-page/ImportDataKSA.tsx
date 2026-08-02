@@ -298,17 +298,17 @@ export default function ImportDataKSA() {
             <CardContent className="space-y-4 px-5 pb-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="flex flex-wrap gap-4">
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-900/30 dark:bg-emerald-950/40 dark:text-emerald-200">
                     <p className="font-semibold">Baris siap disimpan</p>
                     <p>{validRowCount}</p>
                   </div>
                   {autoFixedCount > 0 && (
-                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/30 dark:bg-amber-950/40 dark:text-amber-200">
                       <p className="font-semibold">Otomatis diperbaiki</p>
                       <p>{autoFixedCount}</p>
                     </div>
                   )}
-                  <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+                  <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900 dark:border-rose-900/30 dark:bg-rose-950/40 dark:text-rose-200">
                     <p className="font-semibold">Dilewati (invalid/duplikat)</p>
                     <p>{invalidRowCount}</p>
                   </div>
@@ -379,7 +379,7 @@ export default function ImportDataKSA() {
                                 <span>{row.autoFixes.join(", ")}</span>
                               </div>
                             ) : (
-                              <span className="text-emerald-700">Valid</span>
+                              <span className="text-emerald-700 dark:text-emerald-300">Valid</span>
                             )}
                           </TableCell>
                         </TableRow>
@@ -429,7 +429,7 @@ export default function ImportDataKSA() {
               </div>
 
               {saveError ? (
-                <div className="flex items-start gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+                <div className="flex items-start gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900 dark:border-rose-900/30 dark:bg-rose-950/40 dark:text-rose-200">
                   <XCircle className="mt-0.5 size-4 shrink-0" />
                   <span>{saveError}</span>
                 </div>

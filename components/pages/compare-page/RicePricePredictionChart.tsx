@@ -479,7 +479,7 @@ export default function RicePricePredictionChart() {
                   ? "Pilih Jenis Beras"
                   : `${chartSelectedIds.length} Line Ditampilkan`}
                 <ChevronDown
-                  className={`w-4 h-4 text-slate-400 transition-transform ${
+                  className={`w-4 h-4 text-slate-400 dark:text-slate-500 transition-transform ${
                     dropdownOpen ? "rotate-180" : ""
                   }`}
                 />
@@ -488,7 +488,7 @@ export default function RicePricePredictionChart() {
               {dropdownOpen && (
                 <div className="absolute right-0 left-0 sm:left-auto z-30 mt-2 w-full sm:w-72 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 shadow-xl ring-1 ring-slate-200/70 dark:ring-slate-700/70 p-2">
                   <div className="flex items-center justify-between px-1.5 py-1 text-xs">
-                    <span className="text-slate-500">Bandingkan hingga 6 jenis</span>
+                    <span className="text-slate-500 dark:text-slate-400">Bandingkan hingga 6 jenis</span>
                     <div className="flex gap-3">
                       <button
                         type="button"
@@ -499,7 +499,7 @@ export default function RicePricePredictionChart() {
                       </button>
                       <button
                         type="button"
-                        className="text-slate-500 hover:underline cursor-pointer"
+                        className="text-slate-500 dark:text-slate-400 hover:underline cursor-pointer"
                         onClick={() => setChartSelectedIds([])}
                       >
                         Bersihkan
@@ -627,7 +627,7 @@ export default function RicePricePredictionChart() {
                 predictionWeeks={PREDICTION_WEEKS}
               />
 
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-400 dark:text-slate-500">
                 Data historis bersumber dari BI Harga Pangan (bi.go.id/hargapangan).
                 {errorMsg
                   ? " Prediksi tidak tersedia saat ini karena service prediksi tidak dapat dihubungi; grafik menampilkan data historis saja."
@@ -670,7 +670,7 @@ function RiceTooltip({
         </span>
         <span
           className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-            isFuture ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-600"
+            isFuture ? "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
           }`}
         >
           {isFuture ? "Prediksi" : "Historis"}
@@ -708,7 +708,7 @@ function RiceTooltip({
                 </span>
               </div>
               {isFuture && lstmWeight !== undefined && (
-                <p className="text-[10px] text-slate-400 pl-3">
+                <p className="text-[10px] text-slate-400 pl-3 dark:text-slate-500">
                   bobot LSTM {(lstmWeight * 100).toFixed(0)}%
                   {confidenceLabel ? ` · ${confidenceLabel}` : ""}
                 </p>

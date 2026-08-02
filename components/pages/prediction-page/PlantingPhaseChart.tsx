@@ -220,11 +220,11 @@ export default function PlantingPhaseChart() {
   return (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
-          Prediksi <span className="text-green-600">Fase Tanam</span> per
+        <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-slate-100">
+          Prediksi <span className="text-green-600 dark:text-green-500">Fase Tanam</span> per
           Kecamatan
         </h2>
-        <p className="mt-4 text-lg text-slate-600 max-w-3xl mx-auto">
+        <p className="mt-4 text-lg text-slate-600 dark:text-slate-300 max-w-3xl mx-auto">
           Bandingkan tren historis dan hasil prediksi fase tanam antar
           kecamatan yang dipilih.
         </p>
@@ -275,7 +275,7 @@ export default function PlantingPhaseChart() {
               type="button"
               onClick={handleSelectAll}
               disabled={selectedCodes.length === DISTRICT_LIST.length}
-              className="text-xs font-medium text-green-700 hover:text-green-800 hover:underline cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="text-xs font-medium text-green-700 dark:text-green-500 hover:text-green-800 dark:hover:text-green-400 hover:underline cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Pilih Semua
             </button>
@@ -283,7 +283,7 @@ export default function PlantingPhaseChart() {
               type="button"
               onClick={handleReset}
               disabled={selectedCodes.length === 0}
-              className="text-xs font-medium text-slate-500 hover:text-slate-700 hover:underline cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:underline cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Reset
             </button>
@@ -372,14 +372,14 @@ export default function PlantingPhaseChart() {
 
           {selectedDistricts.length === 0 ? (
             <div className="flex flex-col items-center justify-center text-center py-16 text-muted-foreground gap-3">
-              <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-green-50">
-                <Sprout className="h-7 w-7 text-green-700" />
+              <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-green-50 dark:bg-green-950/50">
+                <Sprout className="h-7 w-7 text-green-700 dark:text-green-500" />
               </span>
               <p className="text-sm max-w-sm">
                 Pilih minimal satu kecamatan pada panel di samping untuk
                 menampilkan grafik prediksi.
               </p>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-400 dark:text-slate-500">
                 Klik nama kecamatan pada daftar filter untuk mulai membandingkan.
               </p>
             </div>
@@ -464,7 +464,7 @@ export default function PlantingPhaseChart() {
                 <div className="flex flex-col items-center justify-center text-center py-16 text-muted-foreground gap-3">
                   <Loader2 className="h-7 w-7 animate-spin text-emerald-600" />
                   <p className="text-sm max-w-sm">Memuat data fase tanam...</p>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-400 dark:text-slate-500">
                     Mengambil data historis dan menjalankan prediksi model.
                   </p>
                 </div>

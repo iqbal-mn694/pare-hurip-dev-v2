@@ -34,7 +34,7 @@ function PasswordInput({ className, allowCopy = true, ...props }: PasswordInputP
       <button
         type="button"
         onClick={() => setShow((value) => !value)}
-        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-500 dark:text-slate-400 transition hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
         aria-label={show ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
       >
         {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}

@@ -8,7 +8,6 @@ import {
   History,
   Layers,
   MapPin,
-  Settings,
   Upload,
 } from "lucide-react";
 
@@ -37,11 +36,6 @@ interface ActivityLogRow {
   description: string | null
   created_at: string | null
 }
-
-function getCurrentPeriod() {
-  return new Date().toISOString().slice(0, 7); // YYYY-MM format, matching <input type="month">
-}
-
 function formatPeriodLabel(periode: string) {
   const [year, month] = periode.split("-").map(Number);
   if (!year || !month) return periode;
@@ -122,12 +116,6 @@ function getCardAccent(
         borderColor: "border-l-amber-400",
       };
     }
-    case "Versi model aktif":
-      return {
-        iconBg: "bg-indigo-100 dark:bg-indigo-900/20",
-        iconColor: "text-indigo-700 dark:text-indigo-200",
-        borderColor: "border-l-indigo-400",
-      };
     default:
       return {
         iconBg: "bg-emerald-100 dark:bg-emerald-900/20",
@@ -182,36 +170,30 @@ function computeDistrictProgress(
     .sort((a, b) => b.percent - a.percent);
 }
 
-async function fetchLatestModelVersion(): Promise<string | null> {
+async function fetchLatestPeriod(): Promise<string | null> {
   const { data } = await supabase
-    .from("model_versions")
-    .select("version")
-    .order("created_at", { ascending: false })
+    .from("data_ksa")
+    .select("periode")
+    .order("periode", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return data?.version ?? null;
+  return data?.periode ?? null;
 }
 
 export default function Dashboard() {
   const [districtList, setDistrictList] = React.useState<DistrictRef[]>([]);
   const [ksaRows, setKsaRows] = React.useState<KsaRow[]>([]);
   const [baselineRows, setBaselineRows] = React.useState<KsaRow[]>([]);
-  const [modelVersion, setModelVersion] = React.useState("v1.4.2");
   const [activityLogs, setActivityLogs] = React.useState<ActivityLogRow[]>([]);
-  const [activePeriod, setActivePeriode] = React.useState(() => getCurrentPeriod());
+  const [activePeriod, setActivePeriode] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(true);
   const [isLogLoading, setIsLogLoading] = React.useState(true);
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [logError, setLogError] = React.useState<string | null>(null);
 
-  const fetchLatestPeriod = React.useCallback(async () => {
-    const { data } = await supabase
-      .from("data_ksa")
-      .select("periode")
-      .order("periode", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (data?.periode) setActivePeriode(data.periode);
+  const fetchLatestPeriodCb = React.useCallback(async () => {
+    const periode = await fetchLatestPeriod();
+    if (periode) setActivePeriode(periode);
   }, []);
 
   const fetchSummaryData = React.useCallback(async () => {
@@ -264,9 +246,6 @@ export default function Dashboard() {
     setKsaRows(ksa ?? []);
     setBaselineRows(baseline ?? []);
     setIsLoading(false);
-
-    const version = await fetchLatestModelVersion();
-    if (version) setModelVersion(version);
   }, [activePeriod]);
 
   const fetchActivityLogs = React.useCallback(async () => {
@@ -297,9 +276,9 @@ export default function Dashboard() {
   }, []);
 
   React.useEffect(() => {
-    fetchLatestPeriod();
+    fetchLatestPeriodCb();
     fetchActivityLogs();
-  }, [fetchLatestPeriod, fetchActivityLogs]);
+  }, [fetchLatestPeriodCb, fetchActivityLogs]);
 
   React.useEffect(() => {
     fetchSummaryData();
@@ -312,7 +291,7 @@ export default function Dashboard() {
         "postgres_changes",
         { event: "*", schema: "public", table: "data_ksa" },
         () => {
-          fetchLatestPeriod();
+          fetchLatestPeriodCb();
           fetchSummaryData();
         }
       )
@@ -335,7 +314,7 @@ export default function Dashboard() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchSummaryData, fetchActivityLogs, fetchLatestPeriod]);
+  }, [fetchSummaryData, fetchActivityLogs, fetchLatestPeriodCb]);
 
   const totalSegmen = React.useMemo(
     () => new Set(ksaRows.map((row) => row.segment_id)).size,
@@ -353,7 +332,6 @@ export default function Dashboard() {
     { title: "Total segmen", value: String(totalSegmen), icon: Database },
     { title: "Observasi periode aktif", value: String(ksaRows.length), icon: Upload },
     { title: "Kecamatan terdata", value: `${districtCompleteCount}/${districtList.length}`, icon: Layers },
-    { title: "Versi model aktif", value: modelVersion, icon: Settings },
   ];
 
   const { name, role } = useAdminAuth();
@@ -424,9 +402,9 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {isLoading
-          ? Array.from({ length: 4 }).map((_, index) => (
+          ? Array.from({ length: 3 }).map((_, index) => (
               <Card
                 key={index}
                 className="rounded-xl border border-l-4 border-l-slate-200 shadow-sm dark:border-l-slate-800"
@@ -495,7 +473,7 @@ export default function Dashboard() {
               </div>
             ) : districtList.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center dark:border-slate-800 dark:bg-slate-900/50">
-                <Layers className="mx-auto mb-2 size-6 text-slate-400" />
+                <Layers className="mx-auto mb-2 size-6 text-slate-400 dark:text-slate-500" />
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
                   Belum ada data kecamatan
                 </p>
@@ -581,7 +559,7 @@ export default function Dashboard() {
               </div>
             ) : activityLogs.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center dark:border-slate-800 dark:bg-slate-900/50">
-                <History className="mx-auto mb-2 size-6 text-slate-400" />
+                <History className="mx-auto mb-2 size-6 text-slate-400 dark:text-slate-500" />
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
                   Belum ada aktivitas tercatat
                 </p>

@@ -133,7 +133,7 @@ export default function Login() {
           <CardContent className="space-y-5 px-8 py-8">
             <form className="space-y-5" onSubmit={onSubmit} noValidate>
               {errors.form ? (
-                <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/30 dark:bg-red-950/40 dark:text-red-300">
                   {errors.form}
                 </div>
               ) : null}
@@ -168,7 +168,7 @@ export default function Login() {
                   <button
                     type="button"
                     onClick={() => setShowPassword((value) => !value)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-500 dark:text-slate-400 transition hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                     aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
                   >
                     {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}

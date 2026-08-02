@@ -74,7 +74,7 @@ const Hero: React.FC<HeroProps> = ({ heading, message }) => {
             >
               {message}
             </motion.p>
-            <motion.button className="px-4 py-2 sm:px-8 sm:py-2 border rounded-lg mt-4 cursor-pointer hover:bg-white/40 transition-colors duration-200"
+            <motion.button className="px-4 py-2 sm:px-8 sm:py-2 border rounded-lg mt-4 cursor-pointer hover:bg-white/40 dark:hover:bg-white/20 transition-colors duration-200"
               variants={buttonVariants}
             >
               {/* Replace href with the page's section ID, #visualisasi-interaktif */}

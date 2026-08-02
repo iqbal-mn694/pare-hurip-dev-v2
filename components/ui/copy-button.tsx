@@ -56,7 +56,7 @@ function CopyButton({ value, enabled, label = "Salin", className }: CopyButtonPr
       aria-label={label}
       title={label}
       className={cn(
-        "absolute top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100",
+        "absolute top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-500 dark:text-slate-400 transition hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100",
         className
       )}
     >

@@ -25,10 +25,10 @@ export const formatRupiah = (v: number | undefined | null) =>
 
 export function volatilityTier(v: number): { label: string; className: string } {
   if (v < 1.5)
-    return { label: "Stabil", className: "bg-emerald-100 text-emerald-700 border-emerald-300" };
+    return { label: "Stabil", className: "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800" };
   if (v < 4)
-    return { label: "Sedang", className: "bg-amber-100 text-amber-700 border-amber-300" };
-  return { label: "Tinggi", className: "bg-rose-100 text-rose-700 border-rose-300" };
+    return { label: "Sedang", className: "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800" };
+  return { label: "Tinggi", className: "bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800" };
 }
 
 export interface TypeChartInfo {
@@ -52,12 +52,12 @@ export function TypeSummaryCard({ info, loading }: { info: TypeChartInfo; loadin
     delta === undefined ? Minus : delta > 0.05 ? TrendingUp : delta < -0.05 ? TrendingDown : Minus;
   const trendColor =
     delta === undefined
-      ? "text-slate-400"
+      ? "text-slate-400 dark:text-slate-500"
       : delta > 0.05
       ? "text-rose-600"
       : delta < -0.05
       ? "text-emerald-600"
-      : "text-slate-400";
+      : "text-slate-400 dark:text-slate-500";
 
   return (
     <div
@@ -83,16 +83,16 @@ export function TypeSummaryCard({ info, loading }: { info: TypeChartInfo; loadin
 
       <div className="flex flex-col gap-1.5 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-[10px] md:text-[11px] text-slate-400">Minggu Terakhir</p>
+          <p className="text-[10px] md:text-[11px] text-slate-400 dark:text-slate-500">Minggu Terakhir</p>
           <p className="text-sm md:text-base font-bold text-slate-800 dark:text-white">
             {formatRupiah(last)}
           </p>
         </div>
         <div className="text-left md:text-right">
-          <p className="text-[10px] md:text-[11px] text-slate-400">Prediksi Minggu Depan</p>
+          <p className="text-[10px] md:text-[11px] text-slate-400 dark:text-slate-500">Prediksi Minggu Depan</p>
           <p className="text-sm md:text-base font-bold" style={{ color: info.type.colorPrediction }}>
             {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin inline text-slate-400" />
+              <Loader2 className="w-4 h-4 animate-spin inline text-slate-400 dark:text-slate-500" />
             ) : (
               formatRupiah(pred)
             )}
@@ -103,7 +103,7 @@ export function TypeSummaryCard({ info, loading }: { info: TypeChartInfo; loadin
       <div className={`flex items-center gap-1 text-[11px] md:text-xs font-medium ${trendColor}`}>
         <TrendIcon className="w-3.5 h-3.5" />
         {delta !== undefined ? `${delta > 0 ? "+" : ""}${delta.toFixed(2)}%` : "Menunggu prediksi…"}
-        <span className="text-slate-400 font-normal ml-1">
+        <span className="text-slate-400 dark:text-slate-500 font-normal ml-1">
           • Volatilitas {info.historicalVolatility.toFixed(1)}%
         </span>
       </div>
@@ -122,7 +122,7 @@ export function AverageVolatilityCard({ avg, count }: { avg: number; count: numb
       <p className="text-xl md:text-2xl font-bold text-green-700 dark:text-green-400 mt-1">
         {avg.toFixed(1)}%
       </p>
-      <p className="text-[10px] md:text-[11px] text-slate-500 mt-1">
+      <p className="text-[10px] md:text-[11px] text-slate-500 dark:text-slate-400 mt-1">
         Rata-rata koefisien variasi harga mingguan dari seluruh {count} jenis beras.
       </p>
     </div>
@@ -184,11 +184,11 @@ export function ChartLegend({
           <span className="text-slate-600 dark:text-slate-300">{info.type.label}</span>
         </div>
       ))}
-      <div className="flex items-center gap-2 text-slate-400 ml-auto">
+      <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 ml-auto">
         <span className="w-6 border-t-2 border-slate-400" />
         <span>Historis (mingguan)</span>
       </div>
-      <div className="flex items-center gap-2 text-slate-400">
+      <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
         <span
           className="w-6 border-t-2 border-dashed border-slate-400"
           style={{ display: "inline-block" }}
@@ -196,7 +196,7 @@ export function ChartLegend({
         <span>Prediksi ({predictionWeeks} minggu, LSTM Hybrid)</span>
       </div>
       {infos.length > 1 && (
-        <div className="flex items-center gap-1.5 text-slate-400">
+        <div className="flex items-center gap-1.5 text-slate-400 dark:text-slate-500">
           <Activity className="w-3.5 h-3.5" />
           Volatilitas rata-rata: {avgVolatility.toFixed(1)}%
         </div>

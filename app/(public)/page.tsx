@@ -24,6 +24,7 @@ const JSON_LD = {
   "@context": "https://schema.org",
   "@type": "WebSite",
   name: "Pare Hurip — Prediksi Fase Tanam KSA & Harga Beras",
+  url: "https://parehurip.app",
   description: metadata.description,
   provider: {
     "@type": "GovernmentOrganization",

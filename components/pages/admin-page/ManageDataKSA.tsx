@@ -450,7 +450,7 @@ export default function ManageDataKSA() {
               <div className="space-y-2">
                 <Label htmlFor="search-query">Cari Segmen/Subsegmen</Label>
                 <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 dark:text-slate-400" />
                   <Input
                     id="search-query"
                     value={searchQuery}
@@ -554,19 +554,19 @@ export default function ManageDataKSA() {
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-2">
                             <Button
-                              variant="outline"
-                              size="icon"
+                              variant="secondary"
+                              size="sm"
                               onClick={() => openEdit(row.id)}
-                              className="border-slate-200 text-slate-600 hover:bg-slate-100 max-md:size-10"
+                              className="max-md:size-10"
                               aria-label="Edit"
                             >
                               <Edit3 className="size-4" />
                             </Button>
                             <Button
-                              variant="outline"
-                              size="icon"
+                              variant="destructive"
+                              size="sm"
                               onClick={() => openDelete(row.id)}
-                              className="border-slate-200 text-slate-600 hover:bg-slate-100 max-md:size-10"
+                              className="max-md:size-10"
                               aria-label="Hapus"
                             >
                               <Trash2 className="size-4" />

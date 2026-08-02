@@ -79,37 +79,54 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --background: oklch(0.13 0.012 155);
+  --foreground: oklch(0.97 0.005 100);
+  --card: oklch(0.16 0.014 155);
+  --card-foreground: oklch(0.97 0.005 100);
+  --popover: oklch(0.16 0.014 155);
+  --popover-foreground: oklch(0.97 0.005 100);
+  --primary: oklch(0.92 0.005 100);
+  --primary-foreground: oklch(0.16 0.014 155);
+  --secondary: oklch(0.2 0.016 155);
+  --secondary-foreground: oklch(0.97 0.005 100);
+  --muted: oklch(0.2 0.016 155);
+  --muted-foreground: oklch(0.71 0.015 155);
+  --accent: oklch(0.2 0.016 155);
+  --accent-foreground: oklch(0.97 0.005 100);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 10%);
+  --ring: oklch(0.66 0.11 155);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar: oklch(0.145 0.013 155);
+  --sidebar-foreground: oklch(0.97 0.005 100);
   --sidebar-primary: oklch(0.488 0.243 264.376);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-accent: oklch(0.2 0.016 155);
+  --sidebar-accent-foreground: oklch(0.97 0.005 100);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.66 0.11 155);
+
+  /* Green-tinted remap of the slate scale — every dark:bg-slate-* / dark:text-slate-* utility picks this up */
+  --color-slate-950: oklch(0.13 0.012 155);
+  --color-slate-900: oklch(0.16 0.014 155);
+  --color-slate-800: oklch(0.2 0.016 155);
+  --color-slate-700: oklch(0.26 0.018 155);
+  --color-slate-600: oklch(0.33 0.02 155);
+  --color-slate-500: oklch(0.44 0.022 155);
+  --color-slate-400: oklch(0.58 0.02 155);
+  --color-slate-300: oklch(0.71 0.015 155);
+  --color-slate-200: oklch(0.83 0.01 155);
+  --color-slate-100: oklch(0.93 0.005 155);
+  --color-slate-50: oklch(0.97 0.003 155);
+}
+
+html.dark {
+  color-scheme: dark;
 }
 
 @layer base {
