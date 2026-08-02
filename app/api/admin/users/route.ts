@@ -158,8 +158,6 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: deleteError.message }, { status: 500 });
   }
 
-  await admin.from("profiles").delete().eq("id", id);
-
   await logAdminActivity(
     actor,
     "delete_admin",
