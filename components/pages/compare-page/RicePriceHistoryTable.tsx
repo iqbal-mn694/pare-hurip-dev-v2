@@ -32,7 +32,7 @@ const MIN_DATE = "2020-01-01";
 
 /** Shared className for the native date inputs */
 const DATE_INPUT_CLASS =
-  "h-9 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 text-sm text-slate-700 dark:text-slate-200 shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/30 dark:[color-scheme:dark]";
+  "h-10 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 text-sm text-slate-700 dark:text-slate-200 shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/30 dark:[color-scheme:dark]";
 
 /** CSV column names (snake_case, pandas-friendly) */
 const CSV_KEYS: Record<string, string> = {

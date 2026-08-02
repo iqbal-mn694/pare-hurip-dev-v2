@@ -81,16 +81,16 @@ export function TypeSummaryCard({ info, loading }: { info: TypeChartInfo; loadin
         </span>
       </div>
 
-      <div className="flex items-end justify-between">
+      <div className="flex flex-col gap-1.5 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-[11px] text-slate-400">Minggu Terakhir</p>
-          <p className="text-base font-bold text-slate-800 dark:text-white">
+          <p className="text-[10px] md:text-[11px] text-slate-400">Minggu Terakhir</p>
+          <p className="text-sm md:text-base font-bold text-slate-800 dark:text-white">
             {formatRupiah(last)}
           </p>
         </div>
-        <div className="text-right">
-          <p className="text-[11px] text-slate-400">Prediksi Minggu Depan</p>
-          <p className="text-base font-bold" style={{ color: info.type.colorPrediction }}>
+        <div className="text-left md:text-right">
+          <p className="text-[10px] md:text-[11px] text-slate-400">Prediksi Minggu Depan</p>
+          <p className="text-sm md:text-base font-bold" style={{ color: info.type.colorPrediction }}>
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin inline text-slate-400" />
             ) : (
@@ -100,7 +100,7 @@ export function TypeSummaryCard({ info, loading }: { info: TypeChartInfo; loadin
         </div>
       </div>
 
-      <div className={`flex items-center gap-1 text-xs font-medium ${trendColor}`}>
+      <div className={`flex items-center gap-1 text-[11px] md:text-xs font-medium ${trendColor}`}>
         <TrendIcon className="w-3.5 h-3.5" />
         {delta !== undefined ? `${delta > 0 ? "+" : ""}${delta.toFixed(2)}%` : "Menunggu prediksi…"}
         <span className="text-slate-400 font-normal ml-1">
@@ -114,15 +114,15 @@ export function TypeSummaryCard({ info, loading }: { info: TypeChartInfo; loadin
 /** Average volatility summary tile (last grid cell in Card 1). */
 export function AverageVolatilityCard({ avg, count }: { avg: number; count: number }) {
   return (
-    <div className="rounded-xl border border-dashed border-green-300 dark:border-green-800 bg-green-50/60 dark:bg-green-950/20 p-4 flex flex-col justify-center col-span-2 sm:col-span-3 lg:col-span-2">
+    <div className="rounded-xl border border-dashed border-green-300 dark:border-green-800 bg-green-50/60 dark:bg-green-950/20 p-4 flex flex-col justify-center col-span-1 md:col-span-1 xl:col-span-2">
       <div className="flex items-center gap-2 text-green-700 dark:text-green-400 text-sm font-semibold">
         <Activity className="w-4 h-4" />
         Volatilitas Rata-rata
       </div>
-      <p className="text-2xl font-bold text-green-700 dark:text-green-400 mt-1">
+      <p className="text-xl md:text-2xl font-bold text-green-700 dark:text-green-400 mt-1">
         {avg.toFixed(1)}%
       </p>
-      <p className="text-[11px] text-slate-500 mt-1">
+      <p className="text-[10px] md:text-[11px] text-slate-500 mt-1">
         Rata-rata koefisien variasi harga mingguan dari seluruh {count} jenis beras.
       </p>
     </div>

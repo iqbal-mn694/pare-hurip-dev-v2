@@ -46,6 +46,7 @@ import {
   ChartEmptyState,
   ChartLegend,
 } from "@/components/pages/compare-page/RicePriceChartParts";
+import { useIsMobile } from "@/lib/use-media-query";
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -82,6 +83,7 @@ interface ChartRow {
 const ALL_TYPE_IDS = RICE_TYPES.map((rt) => rt.id);
 
 export default function RicePricePredictionChart() {
+  const isMobile = useIsMobile();
   const [dailyByType, setDailyByType] = useState<Record<string, DailyPricePoint[]>>({});
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [historyRetryTick, setHistoryRetryTick] = useState(0);
@@ -377,7 +379,7 @@ export default function RicePricePredictionChart() {
             <div className="h-4 w-96 max-w-full rounded-md bg-slate-100 dark:bg-slate-800 animate-pulse" />
           </CardHeader>
           <CardContent className="pt-1">
-            <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-4">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div
                   key={i}
@@ -388,7 +390,7 @@ export default function RicePricePredictionChart() {
                   <div className="h-3 w-full rounded bg-slate-100 dark:bg-slate-800 animate-pulse" />
                 </div>
               ))}
-              <div className="rounded-xl border border-dashed border-green-300 dark:border-green-800 p-4 col-span-2 sm:col-span-3 lg:col-span-2">
+              <div className="rounded-xl border border-dashed border-green-300 dark:border-green-800 p-4 col-span-1 md:col-span-1 xl:col-span-2">
                 <div className="h-4 w-2/3 rounded bg-green-200/50 dark:bg-green-900/40 animate-pulse" />
               </div>
             </div>
@@ -424,7 +426,7 @@ export default function RicePricePredictionChart() {
             <ErrorBanner message={errorMsg} onRetry={() => setRetryTick((t) => t + 1)} />
           )}
 
-          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-4">
             {allInfos.map((info) => (
               <TypeSummaryCard key={info.type.id} info={info} loading={loading} />
             ))}
@@ -453,13 +455,13 @@ export default function RicePricePredictionChart() {
             </div>
 
             {/* --- Chart line picker dropdown --- */}
-            <div className="relative shrink-0" ref={dropdownRef}>
+            <div className="relative w-full sm:w-auto shrink-0" ref={dropdownRef}>
               <button
                 type="button"
                 onClick={() => setDropdownOpen((o) => !o)}
                 aria-haspopup="listbox"
                 aria-expanded={dropdownOpen}
-                className="flex items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-xs md:text-sm font-medium text-slate-700 dark:text-slate-200 shadow-sm hover:border-slate-400 dark:hover:border-slate-500 transition-colors cursor-pointer"
+                className="flex w-full sm:w-auto items-center justify-between sm:justify-normal gap-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 shadow-sm hover:border-slate-400 dark:hover:border-slate-500 transition-colors cursor-pointer"
               >
                 <span className="flex -space-x-1">
                   {chartSelectedIds.slice(0, 3).map((id) => {
@@ -484,7 +486,7 @@ export default function RicePricePredictionChart() {
               </button>
 
               {dropdownOpen && (
-                <div className="absolute right-0 z-30 mt-2 w-72 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 shadow-xl ring-1 ring-slate-200/70 dark:ring-slate-700/70 p-2">
+                <div className="absolute right-0 left-0 sm:left-auto z-30 mt-2 w-full sm:w-72 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 shadow-xl ring-1 ring-slate-200/70 dark:ring-slate-700/70 p-2">
                   <div className="flex items-center justify-between px-1.5 py-1 text-xs">
                     <span className="text-slate-500">Bandingkan hingga 6 jenis</span>
                     <div className="flex gap-3">
@@ -535,7 +537,7 @@ export default function RicePricePredictionChart() {
             <>
               <div className="h-[420px] md:h-[480px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={rows} margin={{ top: 10, right: 24, left: 8, bottom: 8 }}>
+                  <ComposedChart data={rows} margin={{ top: 10, right: isMobile ? 8 : 24, left: isMobile ? 4 : 8, bottom: 8 }}>
                     <defs>
                       {chartInfos.map((info) => (
                         <linearGradient
@@ -559,16 +561,17 @@ export default function RicePricePredictionChart() {
                         return row?.label ?? key;
                       }}
                       stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
+                      fontSize={isMobile ? 10 : 12}
+                      minTickGap={isMobile ? 20 : 8}
                     />
                     <YAxis
                       tickFormatter={(v) => formatRupiah(v)}
                       domain={yDomain as [number, number]}
-                      width={95}
+                      width={isMobile ? 64 : 95}
                       stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
+                      fontSize={isMobile ? 10 : 12}
                     />
-                    <Tooltip content={<RiceTooltip infos={chartInfos} rangeLookup={rangeLookup} />} />
+                    <Tooltip content={<RiceTooltip infos={chartInfos} rangeLookup={rangeLookup} />} offset={isMobile ? 10 : 14} />
 
                     {boundaryKey && (
                       <ReferenceLine
@@ -660,8 +663,8 @@ function RiceTooltip({
   const isFuture = label.startsWith(FUTURE_KEY_PREFIX);
 
   return (
-    <div className="rounded-lg border bg-white dark:bg-slate-900 shadow-lg p-3 text-xs md:text-sm min-w-[200px]">
-      <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+    <div className="rounded-lg border bg-white dark:bg-slate-900 shadow-lg p-3.5 text-xs md:text-sm min-w-[220px]">
+      <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-slate-100 dark:border-slate-800">
         <span className="font-semibold text-slate-700 dark:text-slate-100">
           {rangeLookup[label] ?? label}
         </span>
@@ -673,7 +676,7 @@ function RiceTooltip({
           {isFuture ? "Prediksi" : "Historis"}
         </span>
       </div>
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         {infos.map((info) => {
           const histKey = `hist_${info.type.id}`;
           const predKey = `pred_${info.type.id}`;
@@ -692,7 +695,7 @@ function RiceTooltip({
               : undefined;
           return (
             <div key={info.type.id} className="space-y-0.5">
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <span
                     className="w-2 h-2 rounded-full shrink-0"
