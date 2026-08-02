@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   AlertTriangle,
   CheckCircle,
@@ -10,19 +10,19 @@ import {
   Search,
   Trash2,
   X,
-} from "lucide-react"
+} from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -30,12 +30,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { supabase } from "@/lib/supabase/client"
-import { logActivity } from "@/lib/supabase/activity-log"
-import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext"
+} from "@/components/ui/table";
+import { supabase } from "@/lib/supabase/client";
+import { fetchAllChunked } from "@/lib/supabase/query";
+import { logActivity } from "@/lib/supabase/activity-log";
+import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext";
+import EditDialog, { TableRowData } from "@/components/pages/admin-page/EditDialog";
 
-const DEFAULT_FASE_CODE = ""
+const DEFAULT_PHASE_CODE = "";
 
 interface DistrictRef {
   id: string
@@ -52,128 +54,107 @@ interface KsaSegmentRow {
   created_at: string | null
 }
 
-interface TableRowData {
-  id: string
-  segment_id: string
-  subsegment: string
-  nama_kecamatan: string
-  periode: string
-  phase: string
-  created_at: string | null
-}
-
 function buildTableRows(
   rows: KsaSegmentRow[],
   districtList: DistrictRef[]
 ): TableRowData[] {
   return rows.map((item) => {
-    const kec = districtList.find((k) => item.segment_id.startsWith(k.district_code))
+    const district = districtList.find((d) => item.segment_id.startsWith(d.district_code));
 
     return {
       id: item.id,
       segment_id: item.segment_id,
       subsegment: item.subsegment,
-      nama_kecamatan: kec?.name ?? "-",
+      nama_kecamatan: district?.name ?? "-",
       periode: item.periode,
       phase: String(item.phase ?? ""),
       created_at: item.created_at,
-    }
-  })
+    };
+  });
 }
 
-function formatWaktuImport(value: string | null) {
-  if (!value) return "-"
+function formatImportTime(value: string | null) {
+  if (!value) return "-";
   try {
     return new Date(value).toLocaleString("id-ID", {
       dateStyle: "medium",
       timeStyle: "short",
-    })
+    });
   } catch {
-    return value
+    return value;
   }
 }
 
-export default function KelolaDataKSA() {
-  const { id: actorId, name, email } = useAdminAuth()
-  const actorName = name || email || "Admin"
+export default function ManageDataKSA() {
+  const { id: actorId, name, email } = useAdminAuth();
+  const actorName = name || email || "Admin";
 
-  const [districtList, setDistrictList] = React.useState<DistrictRef[]>([])
+  const [districtList, setDistrictList] = React.useState<DistrictRef[]>([]);
 
-  const [importRows, setImportRows] = React.useState<KsaSegmentRow[]>([])
-  const [isLoading, setIsLoading] = React.useState(false)
-  const [loadError, setLoadError] = React.useState("")
-  const [isLiveConnected, setIsLiveConnected] = React.useState(false)
+  const [importRows, setImportRows] = React.useState<KsaSegmentRow[]>([]);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [loadError, setLoadError] = React.useState("");
+  const [isLiveConnected, setIsLiveConnected] = React.useState(false);
 
-  const [filterKecamatan, setFilterKecamatan] = React.useState("")
-  const [filterPeriode, setFilterPeriode] = React.useState("")
-  const [searchQuery, setSearchQuery] = React.useState("")
-  const [pageSize, setPageSize] = React.useState(10)
-  const [page, setPage] = React.useState(1)
+  const [filterDistrict, setFilterDistrict] = React.useState("");
+  const [filterPeriod, setFilterPeriode] = React.useState("");
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [pageSize, setPageSize] = React.useState(10);
+  const [page, setPage] = React.useState(1);
 
-  const [isAddOpen, setIsAddOpen] = React.useState(false)
-  const [isEditOpen, setIsEditOpen] = React.useState(false)
-  const [isDeleteOpen, setIsDeleteOpen] = React.useState(false)
-  const [viewingRowId, setViewingRowId] = React.useState<string | null>(null)
+  const [isAddOpen, setIsAddOpen] = React.useState(false);
+  const [isEditOpen, setIsEditOpen] = React.useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = React.useState(false);
+  const [viewingRowId, setViewingRowId] = React.useState<string | null>(null);
 
-  const [editPeriode, setEditPeriode] = React.useState("")
-  const [editFase, setEditFase] = React.useState(DEFAULT_FASE_CODE)
-  const [editError, setEditError] = React.useState("")
+  const [editPeriod, setEditPeriode] = React.useState("");
+  const [editPhase, setEditFase] = React.useState(DEFAULT_PHASE_CODE);
+  const [editError, setEditError] = React.useState("");
 
-  const [addSegmenValue, setAddSegmenValue] = React.useState("")
-  const [addSubsegmenValue, setAddSubsegmenValue] = React.useState("")
-  const [addPeriode, setAddPeriode] = React.useState("")
-  const [addFase, setAddFase] = React.useState(DEFAULT_FASE_CODE)
-  const [addError, setAddError] = React.useState("")
+  const [addSegmentValue, setAddSegmenValue] = React.useState("");
+  const [addSubsegmentValue, setAddSubsegmenValue] = React.useState("");
+  const [addPeriod, setAddPeriode] = React.useState("");
+  const [addPhase, setAddFase] = React.useState(DEFAULT_PHASE_CODE);
+  const [addError, setAddError] = React.useState("");
 
-  const [notification, setNotification] = React.useState<string>("")
+  const [notification, setNotification] = React.useState<string>("");
 
   const fetchReferenceData = React.useCallback(async () => {
     const { data } = await supabase
       .from("districts")
       .select("id, district_code, name")
-      .order("district_code")
+      .order("district_code");
 
-    setDistrictList(data ?? [])
-  }, [])
+    setDistrictList(data ?? []);
+  }, []);
 
   const fetchImportedData = React.useCallback(async () => {
-    setIsLoading(true)
-    setLoadError("")
+    setIsLoading(true);
+    setLoadError("");
 
     try {
-      // PostgREST memotong respons di 1.000 baris; ambil semua data
-      // bertahap per chunk 1.000 agar seluruh periode bisa difilter/dikelola.
-      const CHUNK = 1000
-      const all: KsaSegmentRow[] = []
-      let from = 0
-
-      while (true) {
-        const { data, error } = await supabase
+      const all = await fetchAllChunked<KsaSegmentRow>((from, to) =>
+        supabase
           .from("data_ksa")
           .select("id, segment_id, subsegment, periode, phase, created_at")
           .order("created_at", { ascending: false })
-          .range(from, from + CHUNK - 1)
+          .range(from, to)
+      );
 
-        if (error) throw new Error(error.message)
-        all.push(...((data as KsaSegmentRow[] | null) ?? []))
-        if (!data || data.length < CHUNK) break
-        from += CHUNK
-      }
-
-      setImportRows(all)
+      setImportRows(all);
     } catch (error) {
       setLoadError(
         error instanceof Error ? error.message : "Gagal memuat data observasi KSA."
-      )
+      );
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [])
+  }, []);
 
   React.useEffect(() => {
-    fetchReferenceData()
-    fetchImportedData()
-  }, [fetchReferenceData, fetchImportedData])
+    fetchReferenceData();
+    fetchImportedData();
+  }, [fetchReferenceData, fetchImportedData]);
 
   React.useEffect(() => {
     const channel = supabase
@@ -182,122 +163,140 @@ export default function KelolaDataKSA() {
         "postgres_changes",
         { event: "*", schema: "public", table: "data_ksa" },
         () => {
-          fetchImportedData()
+          fetchImportedData();
         }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "districts" },
         () => {
-          fetchReferenceData()
+          fetchReferenceData();
         }
       )
       .subscribe((status) => {
-        setIsLiveConnected(status === "SUBSCRIBED")
-      })
+        setIsLiveConnected(status === "SUBSCRIBED");
+      });
 
     return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [fetchImportedData, fetchReferenceData])
+      supabase.removeChannel(channel);
+    };
+  }, [fetchImportedData, fetchReferenceData]);
 
   const tableRows = React.useMemo(
     () => buildTableRows(importRows, districtList),
     [importRows, districtList]
-  )
+  );
 
-  const periodeOptions = React.useMemo(
+  const periodOptions = React.useMemo(
     () => Array.from(new Set(tableRows.map((row) => row.periode))).sort(),
     [tableRows]
-  )
+  );
 
   const filteredRows = React.useMemo(() => {
     return tableRows.filter((row) => {
-      const matchesKecamatan = filterKecamatan
-        ? row.segment_id.startsWith(filterKecamatan)
-        : true
-      const matchesPeriode = filterPeriode ? row.periode === filterPeriode : true
+      const matchesDistrict = filterDistrict
+        ? row.segment_id.startsWith(filterDistrict)
+        : true;
+      const matchesPeriod = filterPeriod ? row.periode === filterPeriod : true;
       const matchesSearch = searchQuery
         ? [row.segment_id, row.subsegment]
             .join(" ")
             .toLowerCase()
             .includes(searchQuery.toLowerCase())
-        : true
+        : true;
 
-      return matchesKecamatan && matchesPeriode && matchesSearch
-    })
-  }, [filterKecamatan, filterPeriode, searchQuery, tableRows])
+      return matchesDistrict && matchesPeriod && matchesSearch;
+    });
+  }, [filterDistrict, filterPeriod, searchQuery, tableRows]);
 
-  const pageCount = Math.max(1, Math.ceil(filteredRows.length / pageSize))
-  const pagedRows = filteredRows.slice((page - 1) * pageSize, page * pageSize)
-
-  React.useEffect(() => {
-    setPage(1)
-  }, [filterKecamatan, filterPeriode, searchQuery, pageSize])
+  const pageCount = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  const pagedRows = filteredRows.slice((page - 1) * pageSize, page * pageSize);
 
   React.useEffect(() => {
-    if (!notification) return
-    const handle = window.setTimeout(() => setNotification(""), 2500)
-    return () => window.clearTimeout(handle)
-  }, [notification])
+    setPage(1);
+  }, [filterDistrict, filterPeriod, searchQuery, pageSize]);
+
+  React.useEffect(() => {
+    if (!notification) return;
+    const handle = window.setTimeout(() => setNotification(""), 2500);
+    return () => window.clearTimeout(handle);
+  }, [notification]);
 
   const openEdit = (rowId: string) => {
-    const current = tableRows.find((row) => row.id === rowId)
-    if (!current) return
-    setViewingRowId(rowId)
-    setEditPeriode(current.periode)
-    setEditFase(current.phase)
-    setEditError("")
-    setIsEditOpen(true)
-  }
+    const current = tableRows.find((row) => row.id === rowId);
+    if (!current) return;
+    setViewingRowId(rowId);
+    setEditPeriode(current.periode);
+    setEditFase(current.phase);
+    setEditError("");
+    setIsEditOpen(true);
+  };
 
   const openDelete = (rowId: string) => {
-    setViewingRowId(rowId)
-    setIsDeleteOpen(true)
-  }
+    setViewingRowId(rowId);
+    setIsDeleteOpen(true);
+  };
 
   const selectedEditRow = viewingRowId
     ? tableRows.find((row) => row.id === viewingRowId)
-    : null
+    : null;
 
   const handleSaveEdit = async () => {
-    if (!selectedEditRow) return
-    setEditError("")
+    if (!selectedEditRow) return;
+    setEditError("");
 
-    const { error } = await supabase
-      .from("data_ksa")
-      .update({ periode: editPeriode, phase: editFase })
-      .eq("id", selectedEditRow.id)
+    try {
+      const response = await fetch("/api/admin/ksa-data", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: selectedEditRow.id, periode: editPeriod, phase: editPhase }),
+      });
+      const result = await response.json();
 
-    if (error) {
-      setEditError(error.message || "Gagal menyimpan perubahan.")
-      return
+      if (!response.ok || result.error) {
+        setEditError(result.error || "Gagal menyimpan perubahan.");
+        return;
+      }
+    } catch {
+      setEditError("Terjadi kesalahan jaringan. Coba lagi.");
+      return;
     }
 
     await logActivity({
       actorId,
       actorName,
       actionType: "update_data",
-      description: `Memperbarui data KSA segmen ${selectedEditRow.segment_id} - ${selectedEditRow.subsegment} periode ${editPeriode}`,
+      description: `Memperbarui data KSA segmen ${selectedEditRow.segment_id} - ${selectedEditRow.subsegment} periode ${editPeriod}`,
       module: "kelola_data",
-    })
+    });
 
-    setIsEditOpen(false)
-    setNotification("Perubahan berhasil disimpan")
-    fetchImportedData()
-  }
+    setIsEditOpen(false);
+    setNotification("Perubahan berhasil disimpan");
+    fetchImportedData();
+  };
 
   const handleDelete = async () => {
-    if (!viewingRowId) return
+    if (!viewingRowId) return;
 
-    const target = tableRows.find((row) => row.id === viewingRowId)
+    const target = tableRows.find((row) => row.id === viewingRowId);
 
-    const { error } = await supabase.from("data_ksa").delete().eq("id", viewingRowId)
+    try {
+      const response = await fetch("/api/admin/ksa-data", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: viewingRowId }),
+      });
+      const result = await response.json();
 
-    if (error) {
-      setNotification(error.message || "Gagal menghapus data")
-      setIsDeleteOpen(false)
-      return
+      if (!response.ok || result.error) {
+        setNotification(result.error || "Gagal menghapus data");
+        setIsDeleteOpen(false);
+        return;
+      }
+    } catch {
+      setNotification("Terjadi kesalahan jaringan. Coba lagi.");
+      setIsDeleteOpen(false);
+      return;
     }
 
     await logActivity({
@@ -306,76 +305,86 @@ export default function KelolaDataKSA() {
       actionType: "delete_data",
       description: `Menghapus data KSA segmen ${target?.segment_id ?? ""} - ${target?.subsegment ?? ""} periode ${target?.periode ?? ""}`,
       module: "kelola_data",
-    })
+    });
 
-    setIsDeleteOpen(false)
-    setNotification("Data berhasil dihapus")
-    fetchImportedData()
-  }
+    setIsDeleteOpen(false);
+    setNotification("Data berhasil dihapus");
+    fetchImportedData();
+  };
 
   const resetFilters = () => {
-    setFilterKecamatan("")
-    setFilterPeriode("")
-    setSearchQuery("")
-  }
+    setFilterDistrict("");
+    setFilterPeriode("");
+    setSearchQuery("");
+  };
 
   const handleOpenAdd = () => {
-    setAddSegmenValue("")
-    setAddSubsegmenValue("")
-    setAddPeriode("")
-    setAddFase(DEFAULT_FASE_CODE)
-    setAddError("")
-    setIsAddOpen(true)
-  }
+    setAddSegmenValue("");
+    setAddSubsegmenValue("");
+    setAddPeriode("");
+    setAddFase(DEFAULT_PHASE_CODE);
+    setAddError("");
+    setIsAddOpen(true);
+  };
 
   const addDuplicateError = React.useMemo(() => {
-    if (!addSegmenValue || !addSubsegmenValue || !addPeriode) return ""
+    if (!addSegmentValue || !addSubsegmentValue || !addPeriod) return "";
     const exists = importRows.some(
       (item) =>
-        item.segment_id === addSegmenValue &&
-        item.subsegment === addSubsegmenValue &&
-        item.periode === addPeriode
-    )
-    return exists ? "Data untuk subsegmen dan periode ini sudah ada" : ""
-  }, [addSegmenValue, addSubsegmenValue, addPeriode, importRows])
+        item.segment_id === addSegmentValue &&
+        item.subsegment === addSubsegmentValue &&
+        item.periode === addPeriod
+    );
+    return exists ? "Data untuk subsegmen dan periode ini sudah ada" : "";
+  }, [addSegmentValue, addSubsegmentValue, addPeriod, importRows]);
 
   const handleSaveAdd = async () => {
-    if (!addSegmenValue || !addSubsegmenValue || !addPeriode || !addFase) return
+    if (!addSegmentValue || !addSubsegmentValue || !addPeriod || !addPhase) return;
     if (addDuplicateError) {
-      setAddError(addDuplicateError)
-      return
+      setAddError(addDuplicateError);
+      return;
     }
 
-    setAddError("")
+    setAddError("");
 
-    const { error } = await supabase.from("data_ksa").insert({
-      segment_id: addSegmenValue,
-      subsegment: addSubsegmenValue,
-      periode: addPeriode,
-      phase: addFase,
-    })
+    try {
+      const response = await fetch("/api/admin/ksa-data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          segment_id: addSegmentValue,
+          subsegment: addSubsegmentValue,
+          periode: addPeriod,
+          phase: addPhase,
+        }),
+      });
+      const result = await response.json();
 
-    if (error) {
-      setAddError(error.message || "Gagal menambahkan data.")
-      return
+      if (!response.ok || result.error) {
+        setAddError(result.error || "Gagal menambahkan data.");
+        return;
+      }
+    } catch {
+      setAddError("Terjadi kesalahan jaringan. Coba lagi.");
+      return;
     }
 
     await logActivity({
       actorId,
       actorName,
       actionType: "add_reference",
-      description: `Menambahkan data KSA manual: segmen ${addSegmenValue} - ${addSubsegmenValue} periode ${addPeriode}`,
+      description: `Menambahkan data KSA manual: segmen ${addSegmentValue} - ${addSubsegmentValue} periode ${addPeriod}`,
       module: "kelola_data",
-    })
+    });
 
-    setIsAddOpen(false)
-    setNotification("Data baru berhasil ditambahkan")
-    fetchImportedData()
-  }
+    setIsAddOpen(false);
+    setNotification("Data baru berhasil ditambahkan");
+    fetchImportedData();
+  };
 
   const selectedDeleteRow = viewingRowId
     ? tableRows.find((row) => row.id === viewingRowId)
-    : null
+    : null;
 
   return (
     <div className="space-y-6">
@@ -401,8 +410,8 @@ export default function KelolaDataKSA() {
               <div className="space-y-2">
                 <Label htmlFor="filter-kecamatan">Kecamatan</Label>
                 <Select
-                  value={filterKecamatan}
-                  onValueChange={(value) => setFilterKecamatan(value)}
+                  value={filterDistrict}
+                  onValueChange={(value) => setFilterDistrict(value)}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Semua Kecamatan" />
@@ -421,7 +430,7 @@ export default function KelolaDataKSA() {
               <div className="space-y-2">
                 <Label htmlFor="filter-periode">Bulan / Periode</Label>
                 <Select
-                  value={filterPeriode}
+                  value={filterPeriod}
                   onValueChange={(value) => setFilterPeriode(value)}
                 >
                   <SelectTrigger className="w-full">
@@ -429,7 +438,7 @@ export default function KelolaDataKSA() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Semua Periode</SelectItem>
-                    {periodeOptions.map((periode) => (
+                    {periodOptions.map((periode) => (
                       <SelectItem key={periode} value={periode}>
                         {periode}
                       </SelectItem>
@@ -540,7 +549,7 @@ export default function KelolaDataKSA() {
                         <TableCell className="text-center">{row.periode}</TableCell>
                         <TableCell className="text-center">{row.phase}</TableCell>
                         <TableCell className="text-center text-sm text-slate-600 dark:text-slate-300">
-                          {formatWaktuImport(row.created_at)}
+                          {formatImportTime(row.created_at)}
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-2">
@@ -614,69 +623,16 @@ export default function KelolaDataKSA() {
       </Card>
 
       {isEditOpen && selectedEditRow ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
-          <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-950">
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Edit Observasi KSA</h2>
-                <p className="text-sm text-slate-600 dark:text-slate-400">Kecamatan, segmen, dan subsegmen tidak dapat diubah di sini.</p>
-              </div>
-              <Button variant="ghost" size="icon" onClick={() => setIsEditOpen(false)}>
-                <X className="size-5" />
-              </Button>
-            </div>
-            <div className="space-y-4 px-6 py-6">
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label>Kecamatan</Label>
-                  <Input value={selectedEditRow.nama_kecamatan} readOnly />
-                </div>
-                <div className="space-y-2">
-                  <Label>Segmen</Label>
-                  <Input value={selectedEditRow.segment_id} readOnly />
-                </div>
-                <div className="space-y-2">
-                  <Label>Subsegmen</Label>
-                  <Input value={selectedEditRow.subsegment} readOnly />
-                </div>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Periode</Label>
-                  <Input
-                    type="month"
-                    value={editPeriode}
-                    onChange={(event) => setEditPeriode(event.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Fase Tanam</Label>
-                  <Input
-                    value={editFase}
-                    onChange={(event) => setEditFase(event.target.value)}
-                    placeholder="Contoh: 3.1"
-                  />
-                </div>
-              </div>
-              {editError ? (
-                <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/30 dark:bg-rose-950/40 dark:text-rose-200">
-                  {editError}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 px-6 py-4 dark:border-slate-800">
-              <Button variant="outline" onClick={() => setIsEditOpen(false)}>
-                Batal
-              </Button>
-              <Button
-                disabled={!editPeriode || !editFase}
-                onClick={handleSaveEdit}
-              >
-                Simpan Perubahan
-              </Button>
-            </div>
-          </div>
-        </div>
+        <EditDialog
+          row={selectedEditRow}
+          periode={editPeriod}
+          phase={editPhase}
+          error={editError}
+          onPeriodeChange={setEditPeriode}
+          onPhaseChange={setEditFase}
+          onClose={() => setIsEditOpen(false)}
+          onSave={handleSaveEdit}
+        />
       ) : null}
 
       {isAddOpen ? (
@@ -696,7 +652,7 @@ export default function KelolaDataKSA() {
                 <div className="space-y-2">
                   <Label>Segmen (segment_id)</Label>
                   <Input
-                    value={addSegmenValue}
+                    value={addSegmentValue}
                     onChange={(event) => setAddSegmenValue(event.target.value)}
                     placeholder="Contoh: 3278071"
                   />
@@ -704,7 +660,7 @@ export default function KelolaDataKSA() {
                 <div className="space-y-2">
                   <Label>Subsegmen</Label>
                   <Input
-                    value={addSubsegmenValue}
+                    value={addSubsegmentValue}
                     onChange={(event) => setAddSubsegmenValue(event.target.value)}
                     placeholder="Contoh: A1"
                   />
@@ -715,14 +671,14 @@ export default function KelolaDataKSA() {
                   <Label>Periode</Label>
                   <Input
                     type="month"
-                    value={addPeriode}
+                    value={addPeriod}
                     onChange={(event) => setAddPeriode(event.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Fase Tanam</Label>
                   <Input
-                    value={addFase}
+                    value={addPhase}
                     onChange={(event) => setAddFase(event.target.value)}
                     placeholder="Contoh: 3.1"
                   />
@@ -740,7 +696,7 @@ export default function KelolaDataKSA() {
               </Button>
               <Button
                 disabled={
-                  !addSegmenValue || !addSubsegmenValue || !addPeriode || !addFase || !!addDuplicateError
+                  !addSegmentValue || !addSubsegmentValue || !addPeriod || !addPhase || !!addDuplicateError
                 }
                 onClick={handleSaveAdd}
               >
@@ -783,5 +739,5 @@ export default function KelolaDataKSA() {
         </div>
       ) : null}
     </div>
-  )
+  );
 }

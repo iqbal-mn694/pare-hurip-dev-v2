@@ -1,13 +1,14 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import * as XLSX from "xlsx"
-import { Download } from "lucide-react"
+import * as React from "react";
+import * as XLSX from "xlsx";
+import { Download } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { supabase } from "@/lib/supabase/client"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardDescription, CardTitle } from "@/components/ui/card"
+import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase/client";
+import { fetchAllChunked } from "@/lib/supabase/query";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardDescription, CardTitle } from "@/components/ui/card";
 
 type ExportState = {
   isLoading: boolean
@@ -16,136 +17,116 @@ type ExportState = {
 }
 
 function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement("a")
-  link.href = url
-  link.download = filename
-  link.click()
-  URL.revokeObjectURL(url)
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function buildCsvContent(rows: Array<Record<string, string | number>>) {
-  const headers = Object.keys(rows[0] ?? {})
-  const lines = [headers.join(",")]
+  const headers = Object.keys(rows[0] ?? {});
+  const lines = [headers.join(",")];
   rows.forEach((row) => {
     const line = headers
       .map((key) => {
-        const value = String(row[key] ?? "")
-        return `"${value.replace(/"/g, '""')}"`
+        const value = String(row[key] ?? "");
+        return `"${value.replace(/"/g, "\"\"")}"`;
       })
-      .join(",")
-    lines.push(line)
-  })
-  return lines.join("\r\n")
+      .join(",");
+    lines.push(line);
+  });
+  return lines.join("\r\n");
 }
 
-export default function Pengaturan() {
+export default function Settings() {
   const [exportStatus, setExportStatus] = React.useState<Record<string, ExportState>>({
     ksa: { isLoading: false, message: "" },
     log: { isLoading: false, message: "" },
-  })
+  });
 
   React.useEffect(() => {
     const timeout = setTimeout(() => {
       setExportStatus((current) => ({
         ksa: { ...current.ksa, message: "" },
         log: { ...current.log, message: "" },
-      }))
-    }, 4000)
+      }));
+    }, 4000);
 
-    return () => clearTimeout(timeout)
-  }, [exportStatus.ksa.message, exportStatus.log.message])
+    return () => clearTimeout(timeout);
+  }, [exportStatus.ksa.message, exportStatus.log.message]);
 
   const exportWorkbook = (rows: Array<Record<string, string | number>>, fileName: string) => {
-    const workbook = XLSX.utils.book_new()
-    const worksheet = XLSX.utils.json_to_sheet(rows)
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1")
-    const excelData = XLSX.write(workbook, { bookType: "xlsx", type: "array" })
-    const blob = new Blob([excelData], { type: "application/octet-stream" })
-    downloadBlob(blob, fileName)
-  }
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+    const excelData = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([excelData], { type: "application/octet-stream" });
+    downloadBlob(blob, fileName);
+  };
 
   const handleExportKsa = async () => {
     setExportStatus((status) => ({
       ...status,
       ksa: { isLoading: true, message: "", isError: false },
-    }))
+    }));
     try {
-      // PostgREST memotong respons di 1.000 baris; ambil semua data
-      // secara bertahap per chunk 1.000 agar seluruh periode terunduh.
-      const CHUNK = 1000
-      const rows: Array<Record<string, string | number>> = []
-      let from = 0
-
-      while (true) {
-        const { data, error } = await supabase
+      const rows = await fetchAllChunked<Record<string, string | number>>((from, to) =>
+        supabase
           .from("data_ksa")
           .select("segment_id, subsegment, periode, phase")
           .order("periode", { ascending: true })
-          .range(from, from + CHUNK - 1)
+          .range(from, to)
+      );
 
-        if (error) throw new Error(error.message)
-        rows.push(...((data as Array<Record<string, string | number>>) ?? []))
-        if (!data || data.length < CHUNK) break
-        from += CHUNK
-      }
+      if (rows.length === 0) throw new Error("Belum ada data KSA untuk diekspor.");
 
-      if (rows.length === 0) throw new Error("Belum ada data KSA untuk diekspor.")
-
-      exportWorkbook(rows, "data-ksa.xlsx")
+      exportWorkbook(rows, "data-ksa.xlsx");
       setExportStatus((status) => ({
         ...status,
         ksa: { isLoading: false, message: "Export Data KSA berhasil." },
-      }))
+      }));
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Gagal mengekspor data KSA."
+      const message = error instanceof Error ? error.message : "Gagal mengekspor data KSA.";
       setExportStatus((status) => ({
         ...status,
         ksa: { isLoading: false, message, isError: true },
-      }))
+      }));
     }
-  }
+  };
 
   const handleExportLog = async () => {
     setExportStatus((status) => ({
       ...status,
       log: { isLoading: true, message: "", isError: false },
-    }))
+    }));
     try {
-      const CHUNK = 1000
-      const rows: Array<Record<string, string | number>> = []
-      let from = 0
-
-      while (true) {
-        const { data, error } = await supabase
+      const rows = await fetchAllChunked<Record<string, string | number>>((from, to) =>
+        supabase
           .from("activity_log")
           .select("actor_name, action_type, module, description, created_at")
           .order("created_at", { ascending: false })
-          .range(from, from + CHUNK - 1)
+          .range(from, to)
+      );
 
-        if (error) throw new Error(error.message)
-        rows.push(...((data as Array<Record<string, string | number>>) ?? []))
-        if (!data || data.length < CHUNK) break
-        from += CHUNK
-      }
+      if (rows.length === 0) throw new Error("Belum ada log aktivitas untuk diekspor.");
 
-      if (rows.length === 0) throw new Error("Belum ada log aktivitas untuk diekspor.")
-
-      const csv = buildCsvContent(rows)
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
-      downloadBlob(blob, "log-aktivitas.csv")
+      const csv = buildCsvContent(rows);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      downloadBlob(blob, "log-aktivitas.csv");
       setExportStatus((status) => ({
         ...status,
         log: { isLoading: false, message: "Export Log Aktivitas berhasil." },
-      }))
+      }));
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Gagal mengekspor log aktivitas."
+      const message = error instanceof Error ? error.message : "Gagal mengekspor log aktivitas.";
       setExportStatus((status) => ({
         ...status,
         log: { isLoading: false, message, isError: true },
-      }))
+      }));
     }
-  }
+  };
 
   return (
     <div className="space-y-6">
@@ -219,5 +200,5 @@ export default function Pengaturan() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

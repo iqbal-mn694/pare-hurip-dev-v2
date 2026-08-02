@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   AlertCircle,
   Cpu,
@@ -10,12 +10,12 @@ import {
   MapPin,
   Settings,
   Upload,
-} from "lucide-react"
+} from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { supabase } from "@/lib/supabase/client"
-import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext"
+import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { supabase } from "@/lib/supabase/client";
+import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext";
 
 interface DistrictRef {
   id: string
@@ -38,55 +38,55 @@ interface ActivityLogRow {
   created_at: string | null
 }
 
-function getCurrentPeriode() {
-  return new Date().toISOString().slice(0, 7) // format YYYY-MM, sesuai <input type="month">
+function getCurrentPeriod() {
+  return new Date().toISOString().slice(0, 7); // YYYY-MM format, matching <input type="month">
 }
 
-function formatPeriodeLabel(periode: string) {
-  const [year, month] = periode.split("-").map(Number)
-  if (!year || !month) return periode
-  const date = new Date(year, month - 1, 1)
-  return date.toLocaleDateString("id-ID", { month: "long", year: "numeric" })
+function formatPeriodLabel(periode: string) {
+  const [year, month] = periode.split("-").map(Number);
+  if (!year || !month) return periode;
+  const date = new Date(year, month - 1, 1);
+  return date.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
 }
 
 function getProgressColor(percent: number) {
-  if (percent >= 80) return "bg-emerald-500"
-  if (percent >= 40) return "bg-amber-500"
-  return "bg-destructive"
+  if (percent >= 80) return "bg-emerald-500";
+  if (percent >= 40) return "bg-amber-500";
+  return "bg-destructive";
 }
 
 function getActivityIcon(module: string | null) {
   switch (module) {
     case "import_data":
-      return Upload
+      return Upload;
     case "kelola_data":
-      return Database
+      return Database;
     case "referensi_wilayah":
-      return MapPin
+      return MapPin;
     case "model_prediksi":
-      return Cpu
+      return Cpu;
     default:
-      return Database
+      return Database;
   }
 }
 
 function formatRelativeTime(value: string | null) {
-  if (!value) return "-"
-  const date = new Date(value)
-  const diffMs = Date.now() - date.getTime()
-  const diffMin = Math.floor(diffMs / 60000)
+  if (!value) return "-";
+  const date = new Date(value);
+  const diffMs = Date.now() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
 
-  if (diffMin < 1) return "Baru saja"
-  if (diffMin < 60) return `${diffMin} menit lalu`
+  if (diffMin < 1) return "Baru saja";
+  if (diffMin < 60) return `${diffMin} menit lalu`;
 
-  const diffHour = Math.floor(diffMin / 60)
-  if (diffHour < 24) return `${diffHour} jam lalu`
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour} jam lalu`;
 
-  const diffDay = Math.floor(diffHour / 24)
-  if (diffDay === 1) return "Kemarin"
-  if (diffDay < 7) return `${diffDay} hari lalu`
+  const diffDay = Math.floor(diffHour / 24);
+  if (diffDay === 1) return "Kemarin";
+  if (diffDay < 7) return `${diffDay} hari lalu`;
 
-  return date.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
+  return date.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 }
 
 function getCardAccent(
@@ -99,73 +99,128 @@ function getCardAccent(
         iconBg: "bg-blue-100 dark:bg-blue-900/20",
         iconColor: "text-blue-700 dark:text-blue-200",
         borderColor: "border-l-blue-400",
-      }
+      };
     case "Observasi periode aktif":
       return {
         iconBg: "bg-emerald-100 dark:bg-emerald-900/20",
         iconColor: "text-emerald-700 dark:text-emerald-200",
         borderColor: "border-l-emerald-400",
-      }
+      };
     case "Kecamatan terdata": {
-      const [done, total] = (value ?? "").split("/")
-      const allComplete = done === total && total !== undefined
+      const [done, total] = (value ?? "").split("/");
+      const allComplete = done === total && total !== undefined;
       if (allComplete) {
         return {
           iconBg: "bg-emerald-100 dark:bg-emerald-900/20",
           iconColor: "text-emerald-700 dark:text-emerald-200",
           borderColor: "border-l-emerald-400",
-        }
+        };
       }
       return {
         iconBg: "bg-amber-100 dark:bg-amber-900/20",
         iconColor: "text-amber-700 dark:text-amber-200",
         borderColor: "border-l-amber-400",
-      }
+      };
     }
     case "Versi model aktif":
       return {
         iconBg: "bg-indigo-100 dark:bg-indigo-900/20",
         iconColor: "text-indigo-700 dark:text-indigo-200",
         borderColor: "border-l-indigo-400",
-      }
+      };
     default:
       return {
         iconBg: "bg-emerald-100 dark:bg-emerald-900/20",
         iconColor: "text-emerald-700 dark:text-emerald-200",
         borderColor: "border-l-emerald-400",
-      }
+      };
   }
 }
 
-export default function Dashboard() {
-  const [districtList, setDistrictList] = React.useState<DistrictRef[]>([])
-  const [ksaRows, setKsaRows] = React.useState<KsaRow[]>([])
-  const [baselineRows, setBaselineRows] = React.useState<KsaRow[]>([])
-  const [modelVersion, setModelVersion] = React.useState("v1.4.2")
-  const [activityLogs, setActivityLogs] = React.useState<ActivityLogRow[]>([])
-  const [activePeriode, setActivePeriode] = React.useState(() => getCurrentPeriode())
-  const [isLoading, setIsLoading] = React.useState(true)
-  const [isLogLoading, setIsLogLoading] = React.useState(true)
-  const [loadError, setLoadError] = React.useState<string | null>(null)
-  const [logError, setLogError] = React.useState<string | null>(null)
+interface DistrictProgressItem {
+  name: string
+  active: number
+  baseline: number
+  percent: number
+}
 
-  const fetchLatestPeriode = React.useCallback(async () => {
+/** Percent of observed segments in the active period vs the best baseline period, per district */
+function computeDistrictProgress(
+  districtList: DistrictRef[],
+  ksaRows: KsaRow[],
+  baselineRows: KsaRow[]
+): DistrictProgressItem[] {
+  return districtList
+    .map((district) => {
+      const byPeriod = new Map<string, Set<string>>();
+      baselineRows.forEach((row) => {
+        if (!row.segment_id.startsWith(district.district_code)) return;
+        const set = byPeriod.get(row.periode) ?? new Set<string>();
+        set.add(row.segment_id);
+        byPeriod.set(row.periode, set);
+      });
+
+      let baseline = 0;
+      byPeriod.forEach((set) => {
+        if (set.size > baseline) baseline = set.size;
+      });
+
+      const activeSet = new Set(
+        ksaRows
+          .filter((row) => row.segment_id.startsWith(district.district_code))
+          .map((row) => row.segment_id)
+      );
+      const active = activeSet.size;
+      const effectiveBaseline = baseline === 0 && active > 0 ? active : baseline;
+      const percent =
+        effectiveBaseline > 0
+          ? Math.min(100, Math.round((active / effectiveBaseline) * 100))
+          : 0;
+
+      return { name: district.name, active, baseline: effectiveBaseline, percent };
+    })
+    .sort((a, b) => b.percent - a.percent);
+}
+
+async function fetchLatestModelVersion(): Promise<string | null> {
+  const { data } = await supabase
+    .from("model_versions")
+    .select("version")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.version ?? null;
+}
+
+export default function Dashboard() {
+  const [districtList, setDistrictList] = React.useState<DistrictRef[]>([]);
+  const [ksaRows, setKsaRows] = React.useState<KsaRow[]>([]);
+  const [baselineRows, setBaselineRows] = React.useState<KsaRow[]>([]);
+  const [modelVersion, setModelVersion] = React.useState("v1.4.2");
+  const [activityLogs, setActivityLogs] = React.useState<ActivityLogRow[]>([]);
+  const [activePeriod, setActivePeriode] = React.useState(() => getCurrentPeriod());
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isLogLoading, setIsLogLoading] = React.useState(true);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [logError, setLogError] = React.useState<string | null>(null);
+
+  const fetchLatestPeriod = React.useCallback(async () => {
     const { data } = await supabase
       .from("data_ksa")
       .select("periode")
       .order("periode", { ascending: false })
       .limit(1)
-      .maybeSingle()
-    if (data?.periode) setActivePeriode(data.periode)
-  }, [])
+      .maybeSingle();
+    if (data?.periode) setActivePeriode(data.periode);
+  }, []);
 
   const fetchSummaryData = React.useCallback(async () => {
-    setIsLoading(true)
-    setLoadError(null)
+    setIsLoading(true);
+    setLoadError(null);
 
-    let kec: { id: string; district_code: string; name: string }[] | null
-    let ksa: { segment_id: string; periode: string }[] | null
-    let baseline: { segment_id: string; periode: string }[] | null
+    let district: { id: string; district_code: string; name: string }[] | null;
+    let ksa: { segment_id: string; periode: string }[] | null;
+    let baseline: { segment_id: string; periode: string }[] | null;
 
     try {
       const results = await Promise.all([
@@ -173,7 +228,7 @@ export default function Dashboard() {
         supabase
           .from("data_ksa")
           .select("segment_id, periode")
-          .eq("periode", activePeriode),
+          .eq("periode", activePeriod),
         supabase
           .from("data_ksa")
           .select("segment_id, periode")
@@ -184,76 +239,71 @@ export default function Dashboard() {
           .select("segment_id, periode")
           .order("periode", { ascending: false })
           .range(1000, 1999),
-      ])
+      ]);
 
       if (results.some((result) => result.error)) {
-        setLoadError("Gagal memuat data ringkasan dari database.")
-        setIsLoading(false)
-        return
+        setLoadError("Gagal memuat data ringkasan dari database.");
+        setIsLoading(false);
+        return;
       }
 
-      kec = results[0].data
-      ksa = results[1].data
-      baseline = [...(results[2].data ?? []), ...(results[3].data ?? [])]
+      district = results[0].data;
+      ksa = results[1].data;
+      baseline = [...(results[2].data ?? []), ...(results[3].data ?? [])];
     } catch (error) {
       setLoadError(
         error instanceof Error
           ? error.message
           : "Gagal memuat data ringkasan dari database."
-      )
-      setIsLoading(false)
-      return
+      );
+      setIsLoading(false);
+      return;
     }
 
-    setDistrictList(kec ?? [])
-    setKsaRows(ksa ?? [])
-    setBaselineRows(baseline ?? [])
-    setIsLoading(false)
+    setDistrictList(district ?? []);
+    setKsaRows(ksa ?? []);
+    setBaselineRows(baseline ?? []);
+    setIsLoading(false);
 
-    const { data: model } = await supabase
-      .from("model_versions")
-      .select("version")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    if (model?.version) setModelVersion(model.version)
-  }, [activePeriode])
+    const version = await fetchLatestModelVersion();
+    if (version) setModelVersion(version);
+  }, [activePeriod]);
 
   const fetchActivityLogs = React.useCallback(async () => {
-    setIsLogLoading(true)
-    setLogError(null)
+    setIsLogLoading(true);
+    setLogError(null);
     try {
       const { data, error } = await supabase
         .from("activity_log")
         .select("id, actor_id, actor_name, action_type, module, description, created_at")
         .order("created_at", { ascending: false })
-        .limit(5)
+        .limit(5);
 
       if (error) {
-        setLogError("Gagal memuat aktivitas terbaru dari database.")
-        setIsLogLoading(false)
-        return
+        setLogError("Gagal memuat aktivitas terbaru dari database.");
+        setIsLogLoading(false);
+        return;
       }
 
-      setActivityLogs(data ?? [])
+      setActivityLogs(data ?? []);
     } catch (error) {
       setLogError(
         error instanceof Error
           ? error.message
           : "Gagal memuat aktivitas terbaru dari database."
-      )
+      );
     }
-    setIsLogLoading(false)
-  }, [])
+    setIsLogLoading(false);
+  }, []);
 
   React.useEffect(() => {
-    fetchLatestPeriode()
-    fetchActivityLogs()
-  }, [fetchLatestPeriode, fetchActivityLogs])
+    fetchLatestPeriod();
+    fetchActivityLogs();
+  }, [fetchLatestPeriod, fetchActivityLogs]);
 
   React.useEffect(() => {
-    fetchSummaryData()
-  }, [fetchSummaryData])
+    fetchSummaryData();
+  }, [fetchSummaryData]);
 
   React.useEffect(() => {
     const channel = supabase
@@ -262,107 +312,79 @@ export default function Dashboard() {
         "postgres_changes",
         { event: "*", schema: "public", table: "data_ksa" },
         () => {
-          fetchLatestPeriode()
-          fetchSummaryData()
+          fetchLatestPeriod();
+          fetchSummaryData();
         }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "activity_log" },
         () => {
-          fetchActivityLogs()
+          fetchActivityLogs();
         }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "districts" },
         () => {
-          fetchSummaryData()
+          fetchSummaryData();
         }
       )
-      .subscribe()
+      .subscribe();
 
     return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [fetchSummaryData, fetchActivityLogs, fetchLatestPeriode])
+      supabase.removeChannel(channel);
+    };
+  }, [fetchSummaryData, fetchActivityLogs, fetchLatestPeriod]);
 
   const totalSegmen = React.useMemo(
     () => new Set(ksaRows.map((row) => row.segment_id)).size,
     [ksaRows]
-  )
+  );
 
-  const kecamatanProgress = React.useMemo(() => {
-    return districtList
-      .map((kec) => {
-        const byPeriode = new Map<string, Set<string>>()
-        baselineRows.forEach((row) => {
-          if (!row.segment_id.startsWith(kec.district_code)) return
-          const set = byPeriode.get(row.periode) ?? new Set<string>()
-          set.add(row.segment_id)
-          byPeriode.set(row.periode, set)
-        })
+  const districtProgress = React.useMemo(
+    () => computeDistrictProgress(districtList, ksaRows, baselineRows),
+    [districtList, ksaRows, baselineRows]
+  );
 
-        let baseline = 0
-        byPeriode.forEach((set) => {
-          if (set.size > baseline) baseline = set.size
-        })
-
-        const activeSet = new Set(
-          ksaRows
-            .filter((row) => row.segment_id.startsWith(kec.district_code))
-            .map((row) => row.segment_id)
-        )
-        const active = activeSet.size
-        const effectiveBaseline = baseline === 0 && active > 0 ? active : baseline
-        const percent =
-          effectiveBaseline > 0
-            ? Math.min(100, Math.round((active / effectiveBaseline) * 100))
-            : 0
-
-        return { name: kec.name, active, baseline: effectiveBaseline, percent }
-      })
-      .sort((a, b) => b.percent - a.percent)
-  }, [districtList, ksaRows, baselineRows])
-
-  const kecamatanLengkapCount = kecamatanProgress.filter((item) => item.percent === 100).length
+  const districtCompleteCount = districtProgress.filter((item) => item.percent === 100).length;
 
   const summaryItems = [
     { title: "Total segmen", value: String(totalSegmen), icon: Database },
     { title: "Observasi periode aktif", value: String(ksaRows.length), icon: Upload },
-    { title: "Kecamatan terdata", value: `${kecamatanLengkapCount}/${districtList.length}`, icon: Layers },
+    { title: "Kecamatan terdata", value: `${districtCompleteCount}/${districtList.length}`, icon: Layers },
     { title: "Versi model aktif", value: modelVersion, icon: Settings },
-  ]
+  ];
 
-  const { name, role } = useAdminAuth()
-  const needyCount = kecamatanProgress.filter((k) => k.percent < 80).length
-  const goodKec = kecamatanProgress.filter((k) => k.percent >= 80)
-  const warningKec = kecamatanProgress.filter((k) => k.percent >= 40 && k.percent < 80)
-  const criticalKec = kecamatanProgress.filter((k) => k.percent < 40)
+  const { name, role } = useAdminAuth();
+  const needyCount = districtProgress.filter((k) => k.percent < 80).length;
+  const goodDistricts = districtProgress.filter((k) => k.percent >= 80);
+  const warningDistricts = districtProgress.filter((k) => k.percent >= 40 && k.percent < 80);
+  const criticalDistricts = districtProgress.filter((k) => k.percent < 40);
 
-  const kecamatanGroups = [
+  const districtGroups = [
     {
       key: "good",
       label: "Baik",
-      items: goodKec,
+      items: goodDistricts,
       chipClass:
         "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-200",
     },
     {
       key: "warning",
       label: "Perlu Perhatian",
-      items: warningKec,
+      items: warningDistricts,
       chipClass:
         "bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-200",
     },
     {
       key: "critical",
       label: "Kritis",
-      items: criticalKec,
+      items: criticalDistricts,
       chipClass:
         "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-200",
     },
-  ]
+  ];
 
   return (
     <div className="space-y-6">
@@ -386,7 +408,7 @@ export default function Dashboard() {
             : "Semua kecamatan sudah melengkapi data periode aktif."}
         </p>
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          Periode data aktif: {formatPeriodeLabel(activePeriode)}
+          Periode data aktif: {formatPeriodLabel(activePeriod)}
         </p>
       </div>
 
@@ -421,8 +443,8 @@ export default function Dashboard() {
               </Card>
             ))
           : summaryItems.map((item) => {
-          const Icon = item.icon
-          const accent = getCardAccent(item.title, item.value)
+          const Icon = item.icon;
+          const accent = getCardAccent(item.title, item.value);
           return (
             <Card
               key={item.title}
@@ -450,7 +472,7 @@ export default function Dashboard() {
                 </p>
               </CardContent>
             </Card>
-          )
+          );
         })}
       </div>
       <div className="grid gap-4 xl:grid-cols-[60%_40%]">
@@ -482,7 +504,7 @@ export default function Dashboard() {
                 </p>
               </div>
             ) : (
-              kecamatanGroups.map((group, groupIndex) =>
+              districtGroups.map((group, groupIndex) =>
                 group.items.length ? (
                   <div key={group.key} className={groupIndex === 0 ? "" : "mt-4"}>
                     <div className="mb-3 flex items-center gap-2">
@@ -569,7 +591,7 @@ export default function Dashboard() {
               </div>
             ) : (
               activityLogs.map((item) => {
-                const Icon = getActivityIcon(item.module)
+                const Icon = getActivityIcon(item.module);
                 return (
                   <div
                     key={item.id}
@@ -587,12 +609,12 @@ export default function Dashboard() {
                       </p>
                     </div>
                   </div>
-                )
+                );
               })
             )}
           </CardContent>
         </Card>
       </div>
     </div>
-  )
+  );
 }
