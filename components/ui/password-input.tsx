@@ -1,20 +1,20 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Eye, EyeOff } from "lucide-react"
+import * as React from "react";
+import { Eye, EyeOff } from "lucide-react";
 
-import { Input } from "@/components/ui/input"
-import { CopyButton } from "@/components/ui/copy-button"
-import { cn } from "@/lib/utils"
-import { isStrongPassword } from "@/lib/password"
+import { Input } from "@/components/ui/input";
+import { CopyButton } from "@/components/ui/copy-button";
+import { cn } from "@/lib/utils";
+import { isStrongPassword } from "@/lib/password";
 
 type PasswordInputProps = React.ComponentProps<"input"> & {
   allowCopy?: boolean
 }
 
 function PasswordInput({ className, allowCopy = true, ...props }: PasswordInputProps) {
-  const [show, setShow] = React.useState(false)
-  const value = typeof props.value === "string" ? props.value : ""
+  const [show, setShow] = React.useState(false);
+  const value = typeof props.value === "string" ? props.value : "";
 
   return (
     <div className="relative">
@@ -40,7 +40,7 @@ function PasswordInput({ className, allowCopy = true, ...props }: PasswordInputP
         {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
       </button>
     </div>
-  )
+  );
 }
 
-export { PasswordInput }
+export { PasswordInput };

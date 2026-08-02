@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Edit3, Plus, Trash2, X } from "lucide-react"
+import * as React from "react";
+import { Edit3, Plus, Trash2, X } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { ConfirmDialog } from "@/components/ui/confirm-dialog"
-import { TableLoading } from "@/components/ui/table-loading"
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { TableLoading } from "@/components/ui/table-loading";
 import {
   Table,
   TableBody,
@@ -16,160 +16,165 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { supabase } from "@/lib/supabase/client"
-import { logActivity } from "@/lib/supabase/activity-log"
-import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext"
+} from "@/components/ui/table";
+import { supabase } from "@/lib/supabase/client";
+import { logActivity } from "@/lib/supabase/activity-log";
+import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext";
 
-type Kecamatan = {
+type District = {
   id: string
   district_code: string
   name: string
 }
 
-export default function ReferensiWilayah() {
-  const { id: actorId, name, email } = useAdminAuth()
-  const actorName = name || email || "Admin"
+export default function RegionReference() {
+  const { id: actorId, name, email } = useAdminAuth();
+  const actorName = name || email || "Admin";
 
-  const [kecamatanData, setKecamatanData] = React.useState<Kecamatan[]>([])
-  const [isLoading, setIsLoading] = React.useState(false)
-  const [loadError, setLoadError] = React.useState("")
+  const [districtData, setDistrictData] = React.useState<District[]>([]);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [loadError, setLoadError] = React.useState("");
 
-  const [modalOpen, setModalOpen] = React.useState(false)
-  const [editingId, setEditingId] = React.useState<string | null>(null)
-  const [kecamatanKode, setKecamatanKode] = React.useState("")
-  const [kecamatanNama, setKecamatanNama] = React.useState("")
-  const [formError, setFormError] = React.useState("")
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [districtCode, setDistrictCode] = React.useState("");
+  const [districtName, setDistrictName] = React.useState("");
+  const [formError, setFormError] = React.useState("");
 
-  const [deleteModalOpen, setDeleteModalOpen] = React.useState(false)
-  const [deleteTarget, setDeleteTarget] = React.useState<{ id: string; name: string } | null>(null)
+  const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState<{ id: string; name: string } | null>(null);
 
   const fetchData = React.useCallback(async () => {
-    setIsLoading(true)
-    setLoadError("")
+    setIsLoading(true);
+    setLoadError("");
 
     const { data, error } = await supabase
       .from("districts")
       .select("id, district_code, name")
-      .order("district_code")
+      .order("district_code");
 
     if (error) {
-      setLoadError(error.message || "Gagal memuat data kecamatan.")
-      setIsLoading(false)
-      return
+      setLoadError(error.message || "Gagal memuat data kecamatan.");
+      setIsLoading(false);
+      return;
     }
 
-    setKecamatanData(data ?? [])
-    setIsLoading(false)
-  }, [setIsLoading])
+    setDistrictData(data ?? []);
+    setIsLoading(false);
+  }, [setIsLoading]);
 
   React.useEffect(() => {
-    fetchData()
-  }, [fetchData])
+    fetchData();
+  }, [fetchData]);
 
   React.useEffect(() => {
     const channel = supabase
       .channel("referensi-wilayah-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "districts" }, () => fetchData())
-      .subscribe()
+      .subscribe();
 
     return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [fetchData])
+      supabase.removeChannel(channel);
+    };
+  }, [fetchData]);
 
   const openAdd = () => {
-    setEditingId(null)
-    setKecamatanKode("")
-    setKecamatanNama("")
-    setFormError("")
-    setModalOpen(true)
-  }
+    setEditingId(null);
+    setDistrictCode("");
+    setDistrictName("");
+    setFormError("");
+    setModalOpen(true);
+  };
 
   const openEdit = (id: string) => {
-    const target = kecamatanData.find((item) => item.id === id)
-    if (!target) return
-    setEditingId(id)
-    setKecamatanKode(target.district_code)
-    setKecamatanNama(target.name)
-    setFormError("")
-    setModalOpen(true)
-  }
+    const target = districtData.find((item) => item.id === id);
+    if (!target) return;
+    setEditingId(id);
+    setDistrictCode(target.district_code);
+    setDistrictName(target.name);
+    setFormError("");
+    setModalOpen(true);
+  };
 
   const handleSave = async () => {
-    if (!kecamatanKode.trim() || !kecamatanNama.trim()) {
-      setFormError("Kode dan nama kecamatan harus diisi.")
-      return
+    if (!districtCode.trim() || !districtName.trim()) {
+      setFormError("Kode dan nama kecamatan harus diisi.");
+      return;
     }
 
-    const kodeBerulang = kecamatanData.some(
+    const duplicateCode = districtData.some(
       (item) =>
-        item.district_code === kecamatanKode.trim() &&
+        item.district_code === districtCode.trim() &&
         item.id !== editingId,
-    )
-    if (kodeBerulang) {
-      setFormError("Kode kecamatan sudah digunakan.")
-      return
+    );
+    if (duplicateCode) {
+      setFormError("Kode kecamatan sudah digunakan.");
+      return;
     }
 
-    setFormError("")
+    setFormError("");
 
-    if (editingId) {
-      const { error } = await supabase
-        .from("districts")
-        .update({ district_code: kecamatanKode.trim(), name: kecamatanNama.trim() })
-        .eq("id", editingId)
+    try {
+      const response = await fetch("/api/admin/districts", {
+        method: editingId ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          editingId
+            ? { id: editingId, district_code: districtCode.trim(), name: districtName.trim() }
+            : { district_code: districtCode.trim(), name: districtName.trim() },
+        ),
+      });
+      const result = await response.json();
 
-      if (error) {
-        setFormError(error.message || "Gagal menyimpan perubahan.")
-        return
+      if (!response.ok || result.error) {
+        setFormError(
+          result.error ||
+            (editingId ? "Gagal menyimpan perubahan." : "Gagal menambahkan kecamatan."),
+        );
+        return;
       }
-
-      await logActivity({
-        actorId,
-        actorName,
-        actionType: "update_data",
-        description: `Memperbarui kecamatan ${kecamatanKode.trim()} - ${kecamatanNama.trim()}`,
-        module: "referensi_wilayah",
-      })
-    } else {
-      const { error } = await supabase.from("districts").insert({
-        district_code: kecamatanKode.trim(),
-        name: kecamatanNama.trim(),
-      })
-
-      if (error) {
-        setFormError(error.message || "Gagal menambahkan kecamatan.")
-        return
-      }
-
-      await logActivity({
-        actorId,
-        actorName,
-        actionType: "add_reference",
-        description: `Menambahkan kecamatan baru ${kecamatanKode.trim()} - ${kecamatanNama.trim()}`,
-        module: "referensi_wilayah",
-      })
+    } catch {
+      setFormError("Terjadi kesalahan jaringan. Coba lagi.");
+      return;
     }
 
-    setModalOpen(false)
-    fetchData()
-  }
+    await logActivity({
+      actorId,
+      actorName,
+      actionType: editingId ? "update_data" : "add_reference",
+      description: `${editingId ? "Memperbarui" : "Menambahkan"} kecamatan ${districtCode.trim()} - ${districtName.trim()}`,
+      module: "referensi_wilayah",
+    });
 
-  const openDeleteModal = (item: Kecamatan) => {
-    setDeleteTarget({ id: item.id, name: item.name })
-    setDeleteModalOpen(true)
-  }
+    setModalOpen(false);
+    fetchData();
+  };
+
+  const openDeleteModal = (item: District) => {
+    setDeleteTarget({ id: item.id, name: item.name });
+    setDeleteModalOpen(true);
+  };
 
   const handleConfirmDelete = async () => {
-    if (!deleteTarget) return
+    if (!deleteTarget) return;
 
-    const target = kecamatanData.find((item) => item.id === deleteTarget.id)
-    const { error } = await supabase.from("districts").delete().eq("id", deleteTarget.id)
+    const target = districtData.find((item) => item.id === deleteTarget.id);
 
-    if (error) {
-      setDeleteModalOpen(false)
-      return
+    try {
+      const response = await fetch("/api/admin/districts", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: deleteTarget.id }),
+      });
+      const result = await response.json();
+
+      if (!response.ok || result.error) {
+        setDeleteModalOpen(false);
+        return;
+      }
+    } catch {
+      setDeleteModalOpen(false);
+      return;
     }
 
     await logActivity({
@@ -178,11 +183,11 @@ export default function ReferensiWilayah() {
       actionType: "delete_data",
       description: `Menghapus kecamatan ${target?.district_code ?? ""} - ${target?.name ?? ""}`,
       module: "referensi_wilayah",
-    })
+    });
 
-    setDeleteModalOpen(false)
-    fetchData()
-  }
+    setDeleteModalOpen(false);
+    fetchData();
+  };
 
   return (
     <div className="space-y-6">
@@ -222,7 +227,7 @@ export default function ReferensiWilayah() {
               <TableBody>
                 {isLoading ? (
                   <TableLoading colSpan={3} />
-                ) : kecamatanData.length === 0 ? (
+                ) : districtData.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={3} className="h-24 text-center">
                       <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -231,7 +236,7 @@ export default function ReferensiWilayah() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  kecamatanData.map((item) => (
+                  districtData.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell>{item.district_code}</TableCell>
                       <TableCell>{item.name}</TableCell>
@@ -283,8 +288,8 @@ export default function ReferensiWilayah() {
                 <Label htmlFor="kecamatan-kode">Kode Kecamatan</Label>
                 <Input
                   id="kecamatan-kode"
-                  value={kecamatanKode}
-                  onChange={(event) => setKecamatanKode(event.target.value)}
+                  value={districtCode}
+                  onChange={(event) => setDistrictCode(event.target.value)}
                   placeholder="Contoh: 3278071"
                 />
               </div>
@@ -292,8 +297,8 @@ export default function ReferensiWilayah() {
                 <Label htmlFor="kecamatan-nama">Nama Kecamatan</Label>
                 <Input
                   id="kecamatan-nama"
-                  value={kecamatanNama}
-                  onChange={(event) => setKecamatanNama(event.target.value)}
+                  value={districtName}
+                  onChange={(event) => setDistrictName(event.target.value)}
                   placeholder="Contoh: Bungursari"
                 />
               </div>
@@ -325,5 +330,5 @@ export default function ReferensiWilayah() {
         onCancel={() => setDeleteModalOpen(false)}
       />
     </div>
-  )
+  );
 }

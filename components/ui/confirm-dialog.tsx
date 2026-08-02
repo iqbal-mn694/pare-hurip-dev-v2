@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Trash2, type LucideIcon } from "lucide-react"
+import * as React from "react";
+import { Trash2, type LucideIcon } from "lucide-react";
 
 interface ConfirmDialogProps {
   open: boolean
@@ -27,19 +27,19 @@ export function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps) {
   React.useEffect(() => {
-    if (!open) return
+    if (!open) return;
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        onCancel()
+        onCancel();
       }
-    }
+    };
 
-    document.addEventListener("keydown", handleEscape)
-    return () => document.removeEventListener("keydown", handleEscape)
-  }, [open, onCancel])
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [open, onCancel]);
 
-  if (!open) return null
+  if (!open) return null;
 
   return (
     <div
@@ -74,5 +74,5 @@ export function ConfirmDialog({
         </div>
       </div>
     </div>
-  )
+  );
 }

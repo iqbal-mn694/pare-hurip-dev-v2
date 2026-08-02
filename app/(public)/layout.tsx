@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "../globals.css";
 import Footer from "@/components/layout/Footer";
 import Header from "@/components/layout/Header";
-import RouteTransitionLoader from "@/components/layout/RouteTransitionLoader";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,7 +34,6 @@ export default function PublicLayout({
           {children}
           <Footer />
         </div>
-        <RouteTransitionLoader />
       </body>
     </html>
   );

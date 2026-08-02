@@ -1,6 +1,6 @@
-import { Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react";
 
-import { TableCell, TableRow } from "@/components/ui/table"
+import { TableCell, TableRow } from "@/components/ui/table";
 
 function TableLoading({
   colSpan,
@@ -18,7 +18,7 @@ function TableLoading({
         </div>
       </TableCell>
     </TableRow>
-  )
+  );
 }
 
-export { TableLoading }
+export { TableLoading };

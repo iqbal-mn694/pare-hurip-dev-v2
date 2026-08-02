@@ -1,40 +1,23 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireAdmin, type AuthActor } from "@/lib/supabase/auth-guard";
+import { logServerActivity } from "@/lib/supabase/activity-log";
 import { isStrongPassword } from "@/lib/password";
 import { isValidEmail } from "@/lib/email";
 
 async function requireSuperAdmin() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { error: NextResponse.json({ error: "Belum login." }, { status: 401 }), actor: null };
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, name")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.role !== "superadmin") {
-    return { error: NextResponse.json({ error: "Hanya superadmin yang boleh mengakses ini." }, { status: 403 }), actor: null };
-  }
-
-  return { error: null, actor: { id: user.id, name: profile?.name ?? "" } };
+  return requireAdmin(["superadmin"], "Hanya superadmin yang boleh mengakses ini.");
 }
 
 async function logAdminActivity(
-  actor: { id: string; name: string },
+  actor: AuthActor,
   actionType: string,
   description: string
 ) {
-  const admin = createAdminClient();
-  await admin.from("activity_log").insert({
-    actor_id: actor.id,
-    actor_name: actor.name || "Superadmin",
-    action_type: actionType,
+  await logServerActivity(createAdminClient(), {
+    actorId: actor.id,
+    actorName: actor.name || "Superadmin",
+    actionType,
     description,
     module: "pengguna_admin",
   });
@@ -42,7 +25,9 @@ async function logAdminActivity(
 
 export async function GET() {
   const { error } = await requireSuperAdmin();
-  if (error) return error;  const admin = createAdminClient();
+  if (error) return error;
+
+  const admin = createAdminClient();
   const { data, error: fetchError } = await admin
     .from("profiles")
     .select("id, name, email, role, created_at")

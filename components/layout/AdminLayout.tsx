@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import Image from "next/image"
-import { usePathname, useRouter } from "next/navigation"
+import * as React from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Home,
   Upload,
@@ -15,28 +15,28 @@ import {
   Menu,
   X,
   LogOut,
-} from "lucide-react"
+} from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { supabase } from "@/lib/supabase/client"
-import { showRouteTransition } from "@/lib/route-transition"
-import { ConfirmDialog } from "@/components/ui/confirm-dialog"
-import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext"
+import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase/client";
+import { showRouteTransition } from "@/lib/route-transition";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext";
 
 const navItems = [
   { name: "Dashboard", href: "/admin/dashboard", icon: Home },
-  { name: "Import Data KSA", href: "/admin/import-data-ksa", icon: Upload },
-  { name: "Kelola Data KSA", href: "/admin/kelola-data-ksa", icon: Database },
-  { name: "Referensi Wilayah", href: "/admin/referensi-wilayah", icon: MapPin },
-  { name: "Model Prediksi", href: "/admin/model-prediksi", icon: Cpu },
-  { name: "Pengguna Admin", href: "/admin/pengguna-admin", icon: Users },
-]
+  { name: "Import Data KSA", href: "/admin/ksa-import", icon: Upload },
+  { name: "Kelola Data KSA", href: "/admin/ksa-data", icon: Database },
+  { name: "Referensi Wilayah", href: "/admin/region-reference", icon: MapPin },
+  { name: "Model Prediksi", href: "/admin/prediction-model", icon: Cpu },
+  { name: "Pengguna Admin", href: "/admin/admin-users", icon: Users },
+];
 
 const secondaryNavItem = {
   name: "Pengaturan",
-  href: "/admin/pengaturan",
+  href: "/admin/settings",
   icon: Settings,
-}
+};
 
 interface AdminLayoutProps {
   title: string
@@ -48,78 +48,78 @@ function getInitials(source: string) {
   const words = source
     .trim()
     .split(/\s+/)
-    .filter(Boolean)
+    .filter(Boolean);
 
   if (words.length === 0) {
-    return "PH"
+    return "PH";
   }
 
   if (words.length === 1) {
-    return words[0].slice(0, 2).toUpperCase().replace(/[^A-Z]/g, "") || "PH"
+    return words[0].slice(0, 2).toUpperCase().replace(/[^A-Z]/g, "") || "PH";
   }
 
-  return (words[0][0] + words[1][0]).toUpperCase()
+  return (words[0][0] + words[1][0]).toUpperCase();
 }
 
 function sentenceCase(value: string) {
-  return value ? value[0].toUpperCase() + value.slice(1).toLowerCase() : value
+  return value ? value[0].toUpperCase() + value.slice(1).toLowerCase() : value;
 }
 
 export function AdminLayout({ title, subtitle, children }: AdminLayoutProps) {
-  const pathname = usePathname()
-  const router = useRouter()
-  const [sidebarOpen, setSidebarOpen] = React.useState(false)
-  const [profileMenuOpen, setProfileMenuOpen] = React.useState(false)
-  const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false)
-  const profileMenuRef = React.useRef<HTMLDivElement | null>(null)
-  const { role, name, email, setRole } = useAdminAuth()
+  const pathname = usePathname();
+  const router = useRouter();
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = React.useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
+  const profileMenuRef = React.useRef<HTMLDivElement | null>(null);
+  const { role, name, email, setRole } = useAdminAuth();
 
-  const activePath = pathname ?? "/admin/dashboard"
-  const displayRole = sentenceCase(role || "Admin")
-  const displayName = name || displayRole
-  const displayEmail = email || "-"
-  const initials = getInitials(name || displayRole)
+  const activePath = pathname ?? "/admin/dashboard";
+  const displayRole = sentenceCase(role || "Admin");
+  const displayName = name || displayRole;
+  const displayEmail = email || "-";
+  const initials = getInitials(name || displayRole);
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
-        setProfileMenuOpen(false)
+        setProfileMenuOpen(false);
       }
-    }
+    };
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setProfileMenuOpen(false)
+        setProfileMenuOpen(false);
       }
-    }
+    };
 
-    document.addEventListener("mousedown", handleClickOutside)
-    document.addEventListener("keydown", handleEscape)
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-      document.removeEventListener("keydown", handleEscape)
-    }
-  }, [])
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
 
 const openLogoutConfirm = React.useCallback(() => {
-    setProfileMenuOpen(false)
-    setShowLogoutConfirm(true)
-  }, [])
+    setProfileMenuOpen(false);
+    setShowLogoutConfirm(true);
+  }, []);
 
   const confirmLogout = React.useCallback(async () => {
-    setShowLogoutConfirm(false)
+    setShowLogoutConfirm(false);
 
     try {
-      await supabase.auth.signOut()
+      await supabase.auth.signOut();
     } catch {
-      // TODO: Sign out akan efektif penuh begitu tim backend menyelesaikan integrasi sesi Supabase.
+      // TODO: Sign out fully takes effect once the backend team completes the Supabase session integration.
     }
 
-    setRole("")
-    showRouteTransition()
-    router.push("/admin/login")
-  }, [router, setRole])
+    setRole("");
+    showRouteTransition();
+    router.push("/admin/login");
+  }, [router, setRole]);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
@@ -157,13 +157,13 @@ const openLogoutConfirm = React.useCallback(() => {
           <div className="flex-1 overflow-y-auto pr-1 pb-4">
             <nav className="space-y-1">
               {navItems.map((item) => {
-                if (item.href === "/admin/pengguna-admin" && role !== "superadmin") {
-                  return null
+                if (item.href === "/admin/admin-users" && role !== "superadmin") {
+                  return null;
                 }
 
-                const Icon = item.icon
+                const Icon = item.icon;
                 const isActive =
-                  activePath === item.href || activePath.startsWith(item.href)
+                  activePath === item.href || activePath.startsWith(item.href);
 
                 return (
                   <Link
@@ -180,14 +180,14 @@ const openLogoutConfirm = React.useCallback(() => {
                     <Icon className="size-4" />
                     <span>{item.name}</span>
                   </Link>
-                )
+                );
               })}
             </nav>
           </div>
 
           <div className="border-t border-slate-200 pt-4 text-slate-500 dark:border-slate-800 dark:text-slate-400">
             {(() => {
-              const SecondaryIcon = secondaryNavItem.icon
+              const SecondaryIcon = secondaryNavItem.icon;
               return (
                 <Link
                   href={secondaryNavItem.href}
@@ -202,7 +202,7 @@ const openLogoutConfirm = React.useCallback(() => {
                   <SecondaryIcon className="size-4" />
                   <span>{secondaryNavItem.name}</span>
                 </Link>
-              )
+              );
             })()}
           </div>
         </aside>
@@ -283,5 +283,5 @@ const openLogoutConfirm = React.useCallback(() => {
         onCancel={() => setShowLogoutConfirm(false)}
       />
     </div>
-  )
+  );
 }

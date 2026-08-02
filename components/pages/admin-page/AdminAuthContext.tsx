@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { supabase } from "@/lib/supabase/client"
+import * as React from "react";
+import { supabase } from "@/lib/supabase/client";
 
 interface AdminAuthContextValue {
   id: string
@@ -13,91 +13,91 @@ interface AdminAuthContextValue {
   signOut: () => Promise<void>
 }
 
-const AdminAuthContext = React.createContext<AdminAuthContextValue | null>(null)
+const AdminAuthContext = React.createContext<AdminAuthContextValue | null>(null);
 
 export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
-  const [id, setId] = React.useState("")
-  const [role, setRole] = React.useState("")
-  const [name, setName] = React.useState("")
-  const [email, setEmail] = React.useState("")
-  const [loading, setLoading] = React.useState(true)
+  const [id, setId] = React.useState("");
+  const [role, setRole] = React.useState("");
+  const [name, setName] = React.useState("");
+  const [email, setEmail] = React.useState("");
+  const [loading, setLoading] = React.useState(true);
 
   const loadRole = React.useCallback(async (userId: string) => {
     const { data: profile } = await supabase
       .from("profiles")
       .select("name, email, role")
       .eq("id", userId)
-      .single()
+      .single();
 
-    setId(userId)
-    setRole(profile?.role ?? "")
-    setName(profile?.name ?? "")
-    setEmail(profile?.email ?? "")
-  }, [])
+    setId(userId);
+    setRole(profile?.role ?? "");
+    setName(profile?.name ?? "");
+    setEmail(profile?.email ?? "");
+  }, []);
 
   const clearState = React.useCallback(() => {
-    setId("")
-    setRole("")
-    setName("")
-    setEmail("")
-  }, [])
+    setId("");
+    setRole("");
+    setName("");
+    setEmail("");
+  }, []);
 
   React.useEffect(() => {
-    let active = true
+    let active = true;
 
     async function init() {
-      // getUser() memvalidasi JWT lewat jaringan; bila access token
-      // kedaluwarsa, supabase-js otomatis refresh memakai refresh_token
-      // sebelum mengembalikan user. Ini mencegah INITIAL_SESSION dengan
-      // session basi yang membuat role kosong lalu diusir ke login.
-      const { data } = await supabase.auth.getUser()
+      // getUser() validates the JWT over the network; if the access token
+      // is expired, supabase-js automatically refreshes using the refresh_token
+      // before returning the user. This prevents INITIAL_SESSION with a stale
+      // session that would clear the role and kick the user back to login.
+      const { data } = await supabase.auth.getUser();
 
-      if (!active) return
+      if (!active) return;
 
       if (data?.user) {
-        await loadRole(data.user.id)
+        await loadRole(data.user.id);
       } else {
-        clearState()
+        clearState();
       }
-      if (active) setLoading(false)
+      if (active) setLoading(false);
     }
 
-    init()
+    init();
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         if (session?.user) {
-          loadRole(session.user.id)
+          loadRole(session.user.id);
         }
-        setLoading(false)
+        setLoading(false);
       } else if (event === "SIGNED_OUT") {
-        clearState()
-        setLoading(false)
+        clearState();
+        setLoading(false);
       }
-    })
+    });
 
     return () => {
-      active = false
-      listener.subscription.unsubscribe()
-    }
-  }, [clearState, loadRole])
+      active = false;
+      listener.subscription.unsubscribe();
+    };
+  }, [clearState, loadRole]);
 
   const signOut = React.useCallback(async () => {
-    await supabase.auth.signOut()
-    clearState()
-  }, [clearState])
+    await supabase.auth.signOut();
+    clearState();
+  }, [clearState]);
 
   return (
     <AdminAuthContext.Provider value={{ id, role, name, email, setRole, loading, signOut }}>
       {children}
     </AdminAuthContext.Provider>
-  )
+  );
 }
 
 export function useAdminAuth() {
-  const context = React.useContext(AdminAuthContext)
+  const context = React.useContext(AdminAuthContext);
   if (!context) {
-    throw new Error("useAdminAuth must be used within AdminAuthProvider")
+    throw new Error("useAdminAuth must be used within AdminAuthProvider");
   }
-  return context
+  return context;
 }

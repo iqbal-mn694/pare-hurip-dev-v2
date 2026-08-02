@@ -1,17 +1,17 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
-import Image from "next/image"
-import { Eye, EyeOff, Loader2 } from "lucide-react"
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { supabase } from "@/lib/supabase/client"
-import { showRouteTransition } from "@/lib/route-transition"
-import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext"
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { supabase } from "@/lib/supabase/client";
+import { showRouteTransition } from "@/lib/route-transition";
+import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext";
 
 type LoginErrors = {
   email?: string
@@ -20,86 +20,86 @@ type LoginErrors = {
 }
 
 function isValidEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 export default function Login() {
-  const router = useRouter()
-  const { role: currentRole, loading: authLoading, setRole: setAdminRole } = useAdminAuth()
+  const router = useRouter();
+  const { role: currentRole, loading: authLoading, setRole: setAdminRole } = useAdminAuth();
 
-  const [email, setEmail] = React.useState("")
-  const [password, setPassword] = React.useState("")
-  const [showPassword, setShowPassword] = React.useState(false)
-  const [errors, setErrors] = React.useState<LoginErrors>({})
-  const [loading, setLoading] = React.useState(false)
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [errors, setErrors] = React.useState<LoginErrors>({});
+  const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
     if (!authLoading && currentRole) {
-      showRouteTransition()
-      router.replace("/admin/dashboard")
+      showRouteTransition();
+      router.replace("/admin/dashboard");
     }
-  }, [authLoading, currentRole, router])
+  }, [authLoading, currentRole, router]);
 
   const validate = React.useCallback(() => {
-    const nextErrors: LoginErrors = {}
+    const nextErrors: LoginErrors = {};
 
     if (!email.trim()) {
-      nextErrors.email = "Email wajib diisi."
+      nextErrors.email = "Email wajib diisi.";
     } else if (!isValidEmail(email)) {
-      nextErrors.email = "Format email tidak valid."
+      nextErrors.email = "Format email tidak valid.";
     }
 
     if (!password) {
-      nextErrors.password = "Kata sandi wajib diisi."
+      nextErrors.password = "Kata sandi wajib diisi.";
     }
 
-    setErrors(nextErrors)
-    return Object.keys(nextErrors).length === 0
-  }, [email, password])
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  }, [email, password]);
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+    event.preventDefault();
 
     if (!validate()) {
-      return
+      return;
     }
 
-    setLoading(true)
-    setErrors({})
+    setLoading(true);
+    setErrors({});
 
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
-    })
+    });
 
     if (authError || !authData.user) {
-      setLoading(false)
-      setErrors({ form: "Email atau kata sandi salah." })
-      return
+      setLoading(false);
+      setErrors({ form: "Email atau kata sandi salah." });
+      return;
     }
 
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", authData.user.id)
-      .single()
+      .single();
 
-    setLoading(false)
+    setLoading(false);
 
     if (profileError || !profile) {
-      setErrors({ form: "Gagal mengambil data profil. Coba lagi." })
-      return
+      setErrors({ form: "Gagal mengambil data profil. Coba lagi." });
+      return;
     }
 
     if (profile.role !== "admin" && profile.role !== "superadmin") {
-      setErrors({ form: "Akun ini belum memiliki akses admin. Hubungi superadmin." })
-      await supabase.auth.signOut()
-      return
+      setErrors({ form: "Akun ini belum memiliki akses admin. Hubungi superadmin." });
+      await supabase.auth.signOut();
+      return;
     }
 
-    setAdminRole(profile.role)
-    showRouteTransition()
-  }
+    setAdminRole(profile.role);
+    showRouteTransition();
+  };
 
   if (authLoading || currentRole) {
     return (
@@ -111,7 +111,7 @@ export default function Login() {
           </p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -191,5 +191,5 @@ export default function Login() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

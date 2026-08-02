@@ -4,16 +4,16 @@ const nextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'freeimghost.net',
-        port: '',
-        pathname: '/**',
+        protocol: "https",
+        hostname: "freeimghost.net",
+        port: "",
+        pathname: "/**",
       },
       {
-        protocol: 'https',
-        hostname: 'i.ibb.co.com',
-        port: '',
-        pathname: '/**',
+        protocol: "https",
+        hostname: "i.ibb.co.com",
+        port: "",
+        pathname: "/**",
       },
     ],
   },

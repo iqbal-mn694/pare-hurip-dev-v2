@@ -1,78 +1,78 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { usePathname } from "next/navigation"
-import { AnimatePresence, motion } from "framer-motion"
-import { Loader2 } from "lucide-react"
+import * as React from "react";
+import { usePathname } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
+import { Loader2 } from "lucide-react";
 
-const MIN_VISIBLE_MS = 300
-const MAX_VISIBLE_MS = 60000
+const MIN_VISIBLE_MS = 300;
+const MAX_VISIBLE_MS = 60000;
 
 export default function RouteTransitionLoader() {
-  const pathname = usePathname()
-  const [visible, setVisible] = React.useState(false)
-  const [done, setDone] = React.useState(false)
-  const prevPath = React.useRef(pathname)
-  const hideTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pathname = usePathname();
+  const [visible, setVisible] = React.useState(false);
+  const [done, setDone] = React.useState(false);
+  const prevPath = React.useRef(pathname);
+  const hideTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const hide = React.useCallback(() => {
     if (hideTimer.current) {
-      clearTimeout(hideTimer.current)
-      hideTimer.current = null
+      clearTimeout(hideTimer.current);
+      hideTimer.current = null;
     }
-    setVisible(false)
-    setDone(false)
-  }, [])
+    setVisible(false);
+    setDone(false);
+  }, []);
 
   const show = React.useCallback(() => {
-    if (hideTimer.current) clearTimeout(hideTimer.current)
-    setDone(false)
-    setVisible(true)
-    hideTimer.current = setTimeout(hide, MAX_VISIBLE_MS)
-  }, [hide])
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    setDone(false);
+    setVisible(true);
+    hideTimer.current = setTimeout(hide, MAX_VISIBLE_MS);
+  }, [hide]);
 
   React.useEffect(() => {
     const onClick = (event: MouseEvent) => {
-      const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>("a[href]")
-      if (!anchor) return
-      const href = anchor.getAttribute("href") ?? ""
+      const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>("a[href]");
+      if (!anchor) return;
+      const href = anchor.getAttribute("href") ?? "";
       const isInternal =
         href.startsWith("/") &&
         !href.startsWith("#") &&
         !anchor.hasAttribute("download") &&
-        anchor.target !== "_blank"
-      if (!isInternal) return
+        anchor.target !== "_blank";
+      if (!isInternal) return;
       const isSamePage =
-        anchor.origin === window.location.origin && href.split("#")[0] === pathname
-      if (isSamePage) return
-      show()
-    }
-    document.addEventListener("click", onClick)
-    return () => document.removeEventListener("click", onClick)
-  }, [pathname, show])
+        anchor.origin === window.location.origin && href.split("#")[0] === pathname;
+      if (isSamePage) return;
+      show();
+    };
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, [pathname, show]);
 
   React.useEffect(() => {
-    if (prevPath.current === pathname) return
-    prevPath.current = pathname
+    if (prevPath.current === pathname) return;
+    prevPath.current = pathname;
     if (hideTimer.current) {
-      clearTimeout(hideTimer.current)
-      hideTimer.current = null
+      clearTimeout(hideTimer.current);
+      hideTimer.current = null;
     }
-    setDone(true)
-    hideTimer.current = setTimeout(hide, MIN_VISIBLE_MS)
-  }, [pathname, hide])
+    setDone(true);
+    hideTimer.current = setTimeout(hide, MIN_VISIBLE_MS);
+  }, [pathname, hide]);
 
   React.useEffect(() => {
-    const onTransitionShow = () => show()
-    window.addEventListener("route-transition:show", onTransitionShow)
-    return () => window.removeEventListener("route-transition:show", onTransitionShow)
-  }, [show])
+    const onTransitionShow = () => show();
+    window.addEventListener("route-transition:show", onTransitionShow);
+    return () => window.removeEventListener("route-transition:show", onTransitionShow);
+  }, [show]);
 
   React.useEffect(() => {
     return () => {
-      if (hideTimer.current) clearTimeout(hideTimer.current)
-    }
-  }, [])
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+    };
+  }, []);
 
   return (
     <>
@@ -104,5 +104,5 @@ export default function RouteTransitionLoader() {
         )}
       </AnimatePresence>
     </>
-  )
+  );
 }

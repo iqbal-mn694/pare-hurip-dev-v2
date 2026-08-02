@@ -71,12 +71,12 @@ const Header = () => {
           </div>
         </Link>
 
-        {/* Navigasi Desktop */}
+        {/* Desktop Navigation */}
         <ul
           style={{ color: `${textColor}` }}
           className="hidden sm:flex font-semibold space-x-4 items-center"
         >
-          {/* Menggunakan ID section untuk navigasi di halaman utama */}
+          {/* Use section IDs for navigation on the home page */}
           <li className="p-2 hover:text-green-600 transition-colors duration-200">
             <Link
               href="/#about-ksa"
@@ -91,9 +91,9 @@ const Header = () => {
           </li>
           <li className="p-2 hover:text-green-600 transition-colors duration-200">
             <Link
-              href="/visualisasi-ksa"
+              href="/ksa-visualization"
               className={`border-b-2 pb-1 transition-all duration-200 ${
-                isActive("/visualisasi-ksa")
+                isActive("/ksa-visualization")
                   ? "border-green-600"
                   : "border-transparent"
               }`}
@@ -113,7 +113,7 @@ const Header = () => {
           </li>
         </ul>
 
-        {/* Hamburger Mobile */}
+        {/* Mobile Hamburger */}
         <div className="sm:hidden z-20" onClick={handleNav}>
           {nav ? (
             <AiOutlineClose size={28} style={{ color: textColor }} />
@@ -143,9 +143,9 @@ const Header = () => {
             </li>
             <li onClick={handleNav}>
               <Link
-                href="/visualisasi-ksa"
+                href="/ksa-visualization"
                 className={`border-b-2 pb-1 transition-all duration-200 ${
-                  isActive("/visualisasi-ksa")
+                  isActive("/ksa-visualization")
                     ? "border-green-400 text-green-400"
                     : "border-transparent"
                 }`}

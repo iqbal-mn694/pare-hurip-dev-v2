@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(req: NextRequest) {
-  let response = NextResponse.next({ request: req });
+  const response = NextResponse.next({ request: req });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,10 +30,10 @@ export async function middleware(req: NextRequest) {
     return response;
   }
 
-  // Validasi JWT + refresh token sebelum respons dibuat; bila token
-  // kedaluwarsa, hasil refresh otomatis ditulis sebagai cookie baru di
-  // header Set-Cookie, sehingga halaman admin selalu dirender dengan
-  // session yang valid (mencegah lompatan login saat refresh).
+  // Validate JWT + refresh token before building the response; when the token
+  // expires, the refreshed session is automatically written as a new cookie in
+  // the Set-Cookie header, so admin pages always render with a valid session
+  // (preventing login jumps on refresh).
   const {
     data: { user },
   } = await supabase.auth.getUser();

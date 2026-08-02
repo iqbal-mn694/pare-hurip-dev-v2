@@ -1,29 +1,29 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter, usePathname } from "next/navigation"
-import { Loader2 } from "lucide-react"
-import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext"
-import { showRouteTransition } from "@/lib/route-transition"
+import * as React from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { Loader2 } from "lucide-react";
+import { useAdminAuth } from "@/components/pages/admin-page/AdminAuthContext";
+import { showRouteTransition } from "@/lib/route-transition";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const { role, loading } = useAdminAuth()
+  const router = useRouter();
+  const pathname = usePathname();
+  const { role, loading } = useAdminAuth();
 
-  const isLoginPage = pathname === "/admin/login"
+  const isLoginPage = pathname === "/admin/login";
 
   React.useEffect(() => {
     if (!isLoginPage && !loading && !role) {
-      showRouteTransition()
-      router.replace("/admin/login")
+      showRouteTransition();
+      router.replace("/admin/login");
     }
-  }, [isLoginPage, loading, role, router])
+  }, [isLoginPage, loading, role, router]);
 
-  // Halaman login harus dirender apa adanya, tanpa guard —
-  // Login.tsx sudah punya logic loading/redirect sendiri.
+  // The login page must render as-is, without a guard —
+  // Login.tsx already has its own loading/redirect logic.
   if (isLoginPage) {
-    return <>{children}</>
+    return <>{children}</>;
   }
 
   if (loading || !role) {
@@ -36,8 +36,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </p>
         </div>
       </div>
-    )
+    );
   }
 
-  return <>{children}</>
+  return <>{children}</>;
 }
