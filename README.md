@@ -1,98 +1,130 @@
-# Prediksi Produksi & KSA Padi 🌾
+# KSA Produksi Padi — BPS Kota Tasikmalaya 🌾
 
-> **Aplikasi prediksi hasil panen padi dan analisis KSA (Kerangka Sampel Area) untuk Kabupaten Tasikmalaya**
+🇮🇩 [Bahasa Indonesia](README.id.md)
 
-Proyek ini adalah aplikasi berbasis Next.js yang menyajikan data dan visualisasi **Kerangka Sampel Area (KSA)** untuk memprediksi hasil produksi padi di Kabupaten Tasikmalaya. Menggabungkan data statistik pertanian dengan analisis spasial interaktif menggunakan peta Leaflet.
+> **Rice production prediction and KSA (Kerangka Sampel Area) analysis for BPS Kota Tasikmalaya** — planting-phase tracking, interactive maps, and rice price forecasts.
 
----
+## ✨ Features
 
-## ✨ Fitur Utama
-
-- **Prediksi Produksi Padi** — Estimasi hasil panen berdasarkan data historis
-- **Visualisasi KSA Interaktif** — Peta sebaran titik KSA di Tasikmalaya dengan Leaflet
-- **Perbandingan Data** — Analisis komparatif data produksi antar wilayah/kecamatan
-- **Metode KSA** — Informasi tentang metodologi Kerangka Sampel Area
-- **Siklus Tumbuh Padi** — Edukasi fase pertumbuhan padi
-- **Data Real-time** — Dataset JSON harga beras, luas panen, dan data KSA 2024-2025
-- **Animasi Halus** — Transisi dan animasi dengan Framer Motion
-- **Peta Interaktif** — GeoJSON Kecamatan Tasikmalaya dengan informasi detail
+- **KSA Phase Visualization** — planting-phase tracking chart with historical data and h+3 predictions (Random Forest)
+- **Interactive Maps** — protected rice-field areas and 10-district boundaries rendered with Leaflet
+- **Rice Price Comparison** — weekly price history and LSTM-Hybrid predictions per rice type
+- **Admin Panel** — secure dashboard with role-based access (superadmin / admin)
+- **Excel Import** — validated KSA data import from `.xlsx` files with reference auto-registration
+- **Region Reference** — manage the 10 Tasikmalaya district codes used across the system
 
 ## 🛠️ Tech Stack
 
-- **Framework:** Next.js 15 (App Router)
-- **Bahasa:** TypeScript
-- **UI:** Tailwind CSS 4, Radix UI, Headless UI
-- **Animasi:** Framer Motion
-- **Peta:** Leaflet + React-Leaflet + Turf.js
-- **Grafik:** Recharts
-- **Data:** XLSX (pengolahan file Excel)
-- **Statistik:** regression (analisis regresi)
+- **Framework:** Next.js 15 (App Router, Turbopack)
+- **Language:** TypeScript
+- **UI:** Tailwind CSS 4, Radix UI (shadcn/ui, New York style)
+- **Animation:** Framer Motion
+- **Maps:** Leaflet + React-Leaflet + Turf.js
+- **Charts:** Recharts
+- **Data:** XLSX (Excel parsing), Supabase (PostgreSQL)
+- **ML backend:** separate FastAPI service (LSTM-Hybrid + Random Forest)
 
----
+## 🚀 Getting Started
 
-## 🚀 Cara Install & Jalankan
+### Prerequisites
 
-### Prasyarat
-- Node.js 18+
-- npm atau yarn
+- **Node.js 18.18+** (Node 20+ recommended)
+- A package manager of your choice: **pnpm** (recommended — this repo uses `pnpm-lock.yaml`), **npm**, or **yarn**
+- Supabase project with the schema below, and the ML service running locally or remotely
 
-### Langkah
+### Environment variables
+
+Create a `.env.local` file in the project root (see `.env.example` values below):
+
+| Variable | Description | Example |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | `https://xxxx.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon (publishable) key | `eyJhbGciOi...` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role key (server-side only, for admin API routes) | `eyJhbGciOi...` |
+| `ML_API_URL` | ML FastAPI base URL (server-side; falls back to `http://localhost:8000`) | `https://your-ml-service.example.com` |
+
+> Never commit `.env.local` — it is already in `.gitignore`.
+
+### Install & run — choose one package manager
+
+**pnpm (recommended):**
 ```bash
-# Clone repositori
-git clone https://github.com/pandupan/prediksi_produksi_dan_KSA_Padi.git
-cd prediksi_produksi_dan_KSA_Padi
+pnpm install
+pnpm dev        # http://localhost:3000
+```
 
-# Install dependencies
+**npm:**
+```bash
 npm install
-
-# Jalankan development server
 npm run dev
 ```
 
-Buka [http://localhost:3000](http://localhost:3000) di browser.
-
----
-
-## 📁 Struktur Folder
-
-```
-prediksi_produksi_dan_KSA_Padi/
-├── app/
-│   ├── page.tsx              # Halaman utama (Hero, About KSA, Metode)
-│   ├── prediction/
-│   │   └── page.tsx          # Halaman prediksi produksi
-│   ├── visualisasi-ksa/
-│   │   └── page.tsx          # Visualisasi peta KSA
-│   └── compare/
-│       └── page.tsx          # Perbandingan data
-├── components/
-│   ├── layout/
-│   │   ├── Header.tsx        # Navigasi
-│   │   └── Footer.tsx
-│   ├── pages/
-│   │   ├── landing-page/     # Komponen halaman utama
-│   │   ├── prediction-page/  # Komponen prediksi
-│   │   ├── compare-page/     # Komponen perbandingan
-│   │   └── visual-page/      # Komponen visualisasi
-│   ├── KecamatanMap.tsx      # Peta kecamatan
-│   ├── TasikCityMap.tsx      # Peta kota Tasikmalaya
-│   └── ui/                   # Komponen UI (shadcn)
-├── data/
-│   ├── data_harga_beras.json      # Data harga beras
-│   ├── data_luas_panen.json       # Data luas panen
-│   └── dataset_ksa_2024-2025.json # Dataset KSA
-├── lib/
-│   ├── bpn-sawah-geojson.ts
-│   ├── tasikmalaya-geojson.ts
-│   └── utils.tsx
-├── public/
-└── package.json
+**yarn:**
+```bash
+yarn install
+yarn dev
 ```
 
-## 📄 Lisensi
+### Scripts
+
+| Command | Description |
+|---|---|
+| `pnpm dev` / `npm run dev` / `yarn dev` | Start the development server (Turbopack) |
+| `pnpm build` / `npm run build` / `yarn build` | Production build |
+| `pnpm start` / `npm run start` / `yarn start` | Serve the production build |
+| `pnpm lint` / `npm run lint` / `yarn lint` | ESLint (next/core-web-vitals + next/typescript) |
+
+## 📁 Project Structure
+
+```
+app/
+├── (public)/                # Public pages: Header + Footer layout
+│   ├── page.tsx             # Landing page (Hero, About KSA, Method, Growth Cycle)
+│   ├── ksa-visualization/   # Phase chart + Leaflet map
+│   └── compare/             # Rice price history + prediction
+├── admin/                   # Admin panel (protected by middleware)
+│   ├── login/               # Admin login
+│   ├── dashboard/           # KPIs and progress overview
+│   ├── ksa-import/          # Excel import flow
+│   ├── ksa-data/            # Manage KSA observations
+│   ├── region-reference/    # District reference
+│   ├── settings/            # System settings & export
+│   └── admin-users/         # Manage admin accounts (superadmin only)
+└── api/
+    ├── admin/               # users, ksa-import, ksa-data, districts
+    └── v1/                  # ML proxy: rice-price & random-forest predict/batch
+components/
+├── layout/                  # Header, Footer, AdminLayout (mobile drawer sidebar)
+├── pages/                   # landing-page, prediction-page, compare-page, admin-page
+└── ui/                      # shadcn/ui components
+lib/
+├── planting-phase/          # Phase prediction: constants, transform, queries, prediction, data
+├── rice-price/              # Price aggregation + prediction API client
+├── supabase/                # client, server, admin, activity-log, query
+├── excel-import.ts          # Excel parsing & validation
+├── ml-api.ts                # Shared ML API base URL
+├── ricefield-geojson.ts     # Protected rice-field boundaries
+├── tasikmalaya-geojson.ts   # 10-district boundaries
+├── use-media-query.ts       # isMobile hook (matchMedia)
+└── utils.ts                 # cn() helper
+middleware.ts                # Guards /admin/* (JWT validation + session refresh)
+```
+
+## 🤖 ML Service (separate FastAPI backend)
+
+Prediction endpoints are proxied through `app/api/v1/`. The ML service is **not part of this repo** — point `ML_API_URL` (or `NEXT_PUBLIC_ML_API_URL`) at it. Default (development): `http://localhost:8000`.
+
+- `POST /api/v1/rice-price/predict/batch` → `POST /api/v1/lstm-hybrid-price/predict/batch`
+- `POST /api/v1/random-forest/predict/batch` → `POST /api/v1/random-forest/predict/batch`
+
+If the ML service is unreachable, the proxy returns `500` with a clear error — the UI shows an amber banner while history stays visible. No fabricated fallback data.
+
+## 🔐 Admin Panel
+
+- Access is guarded by `middleware.ts` (JWT validation) plus a client-side role guard (`superadmin` / `admin`).
+- Only `superadmin` can manage admin accounts (`/admin/admin-users`).
+- All admin actions are recorded in the `activity_log` table.
+
+## 📄 License
 
 **MIT License**
-
----
-
-> Dibuat oleh [Pandu Pangestu](https://github.com/pandupan) — Data dan analisis untuk mendukung sektor pertanian di Kabupaten Tasikmalaya.
