@@ -96,9 +96,6 @@ importers:
       '@types/react-dom':
         specifier: ^19
         version: 19.2.3(@types/react@19.2.17)
-      '@types/regression':
-        specifier: ^2.0.6
-        version: 2.0.6
       eslint:
         specifier: ^9
         version: 9.39.5(jiti@2.7.0)
@@ -1308,9 +1305,6 @@ packages:
 
   '@types/react@19.2.17':
     resolution: {integrity: sha512-MXfmqaVPEVgkBT/aY0aGCkRWWtByiYQXo3xdQ8r5RzuFrPiRn8Gar2tQdXSUQ2GKV3bkXckek89V8wQBY2Q/Aw==}
-
-  '@types/regression@2.0.6':
-    resolution: {integrity: sha512-sa+sHOUxh9fywFuAFLCcyupFN0CKX654QUZGW5fAZCmV51I4e5nQy1xL2g/JMUW/PeDoF3Yq2lDXb7MoC3KDNg==}
 
   '@types/use-sync-external-store@0.0.6':
     resolution: {integrity: sha512-zFDAD+tlpf2r4asuHEj0XH6pY6i0g5NeAHPn+15wk3BV6JA69eERFXC1gyGThDkVa1zCyKr5jox1+2LbV/AMLg==}
@@ -4901,8 +4895,6 @@ snapshots:
   '@types/react@19.2.17':
     dependencies:
       csstype: 3.2.3
-
-  '@types/regression@2.0.6': {}
 
   '@types/use-sync-external-store@0.0.6': {}
 
