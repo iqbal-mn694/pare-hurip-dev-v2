@@ -32,22 +32,22 @@ import { Label } from "@/components/ui/label";
 import { AlertCircle, AlertTriangle, Loader2, Sprout, X } from "lucide-react";
 
 import {
-  KECAMATAN_LIST,
-  KecamatanOption,
-  KecamatanSeries,
+  DISTRICT_LIST,
+  DistrictOption,
+  DistrictSeries,
   AGGREGATE_VALUE,
   getSubsegmentOptions,
-  getKecamatanColor,
-  loadKecamatanSeries,
+  getDistrictColor,
+  loadDistrictSeries,
   phaseLabel,
   phaseNormalizedPosition,
-} from "@/lib/fase-tanam/data";
-import { getPhaseColor } from "@/lib/utils";
+} from "@/lib/planting-phase/data";
+import { getPhaseColor } from "@/lib/planting-phase/constants";
 
-// Tinggi "lajur" (band) tiap kecamatan di dalam satu chart, dalam unit sumbu-Y.
+// Height of each district "lane" (band) within the chart, in Y-axis units.
 const BAND_HEIGHT = 120;
 
-// Legenda warna fase (swatch persegi) yang dipakai pada catatan bawah grafik.
+// Phase color legend (square swatches) used in the note below the chart.
 const PHASE_LEGEND: { value: number; label: string }[] = [
   { value: 1, label: "Vegetatif 1" },
   { value: 2, label: "Vegetatif 2" },
@@ -60,13 +60,61 @@ const PHASE_LEGEND: { value: number; label: string }[] = [
 ];
 
 interface Loadable {
-  series?: KecamatanSeries;
+  series?: DistrictSeries;
   loading: boolean;
   error?: string;
 }
 
-export default function FaseTanamChart() {
-  // urutan array = urutan tumpukan band (yang dipilih duluan di paling atas)
+/** Build chart rows from the loaded series: one row per month with
+ * per-district band values (history & prediction) plus meta for the tooltip. */
+function buildChartRows(
+  readySeries: DistrictSeries[],
+  selectedCodes: string[]
+): { rows: any[]; boundaryLabel: string | null; monthLabels: string[] } {
+  if (readySeries.length === 0) {
+    return { rows: [], boundaryLabel: null, monthLabels: [] };
+  }
+
+  const total = readySeries.length;
+  const pointCount = readySeries[0].points.length;
+  const historyLength = readySeries[0].points.filter((p) => p.kind === "historical").length;
+
+  const months = readySeries[0].points.map((p) => p.monthLabel);
+  const out: any[] = [];
+
+  for (let t = 0; t < pointCount; t++) {
+    const row: any = { monthLabel: months[t] };
+    readySeries.forEach((series, i) => {
+      const key = `k${i}`;
+      const point = series.points[t];
+      if (!point) return;
+      const normalized = phaseNormalizedPosition(point.phase);
+      const bandValue = (total - 1 - i) * BAND_HEIGHT + normalized * BAND_HEIGHT;
+
+      row[`${key}_hist`] = t < historyLength ? bandValue : null;
+      row[`${key}_pred`] = t >= historyLength - 1 ? bandValue : null;
+      row[`${key}_meta`] = {
+        phase: point.phase,
+        kind: point.kind,
+        confidence: point.confidence,
+        label: phaseLabel(point.phase),
+        name: series.districtName,
+        subsegment: series.subsegment,
+        color: getDistrictColor(selectedCodes[i]),
+      };
+    });
+    out.push(row);
+  }
+
+  return {
+    rows: out,
+    boundaryLabel: months[historyLength - 1] ?? null,
+    monthLabels: months,
+  };
+}
+
+export default function PlantingPhaseChart() {
+  // array order = band stacking order (first selected is on top)
   const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
   const [subsegmentByCode, setSubsegmentByCode] = useState<Record<string, string>>({});
   const [dataByCode, setDataByCode] = useState<Record<string, Loadable>>({});
@@ -74,52 +122,53 @@ export default function FaseTanamChart() {
   const [subsegmentOptions, setSubsegmentOptions] = useState<Record<string, string[]>>({});
   const [optionsLoading, setOptionsLoading] = useState<Record<string, boolean>>({});
 
-  const load = useCallback(async (kec: KecamatanOption, subsegment: string) => {
+  const load = useCallback(async (district: DistrictOption, subsegment: string) => {
     setDataByCode((prev) => ({
       ...prev,
-      [kec.code]: { ...prev[kec.code], loading: true, error: undefined },
+      [district.code]: { ...prev[district.code], loading: true, error: undefined },
     }));
     try {
-      const series = await loadKecamatanSeries(kec, subsegment);
-      setDataByCode((prev) => ({ ...prev, [kec.code]: { series, loading: false } }));
+      const series = await loadDistrictSeries(district, subsegment);
+      setDataByCode((prev) => ({ ...prev, [district.code]: { series, loading: false } }));
     } catch (e: any) {
       setDataByCode((prev) => ({
         ...prev,
-        [kec.code]: { loading: false, error: e?.message ?? "Gagal memuat prediksi" },
+        [district.code]: { loading: false, error: e?.message ?? "Gagal memuat prediksi" },
       }));
     }
   }, []);
 
-  const handleToggle = (kec: KecamatanOption, checked: boolean) => {
+  const loadSubsegmentOptions = useCallback(async (districtCode: string) => {
+    setOptionsLoading((prev) => ({ ...prev, [districtCode]: true }));
+    try {
+      const opts = await getSubsegmentOptions(districtCode);
+      setSubsegmentOptions((prev) => ({ ...prev, [districtCode]: opts }));
+    } catch {
+      setSubsegmentOptions((prev) => ({ ...prev, [districtCode]: [] }));
+    }
+    setOptionsLoading((prev) => ({ ...prev, [districtCode]: false }));
+  }, []);
+
+  const handleToggle = async (district: DistrictOption, checked: boolean) => {
     if (checked) {
-      setSelectedCodes((prev) => [...prev, kec.code]);
-      setSubsegmentByCode((prev) => ({ ...prev, [kec.code]: AGGREGATE_VALUE }));
-      void load(kec, AGGREGATE_VALUE);
-      // Fetch subsegmen options dinamis dari database
-      setOptionsLoading((prev) => ({ ...prev, [kec.code]: true }));
-      getSubsegmentOptions(kec.code).then(
-        (opts) => {
-          setSubsegmentOptions((prev) => ({ ...prev, [kec.code]: opts }));
-          setOptionsLoading((prev) => ({ ...prev, [kec.code]: false }));
-        },
-        () => {
-          setSubsegmentOptions((prev) => ({ ...prev, [kec.code]: [] }));
-          setOptionsLoading((prev) => ({ ...prev, [kec.code]: false }));
-        }
-      );
+      setSelectedCodes((prev) => [...prev, district.code]);
+      setSubsegmentByCode((prev) => ({ ...prev, [district.code]: AGGREGATE_VALUE }));
+      void load(district, AGGREGATE_VALUE);
+      // Fetch subsegment options dynamically from the database
+      void loadSubsegmentOptions(district.code);
     } else {
-      setSelectedCodes((prev) => prev.filter((c) => c !== kec.code));
+      setSelectedCodes((prev) => prev.filter((c) => c !== district.code));
       setHiddenCodes((prev) => {
         const next = new Set(prev);
-        next.delete(kec.code);
+        next.delete(district.code);
         return next;
       });
     }
   };
 
   const handleSelectAll = () => {
-    KECAMATAN_LIST.forEach((kec) => {
-      if (!selectedCodes.includes(kec.code)) handleToggle(kec, true);
+    DISTRICT_LIST.forEach((district) => {
+      if (!selectedCodes.includes(district.code)) void handleToggle(district, true);
     });
   };
 
@@ -132,9 +181,9 @@ export default function FaseTanamChart() {
     setOptionsLoading({});
   };
 
-  const handleSubsegmentChange = (kec: KecamatanOption, value: string) => {
-    setSubsegmentByCode((prev) => ({ ...prev, [kec.code]: value }));
-    void load(kec, value);
+  const handleSubsegmentChange = (district: DistrictOption, value: string) => {
+    setSubsegmentByCode((prev) => ({ ...prev, [district.code]: value }));
+    void load(district, value);
   };
 
   const toggleHidden = (code: string) => {
@@ -146,61 +195,23 @@ export default function FaseTanamChart() {
     });
   };
 
-  const selectedKecamatan = selectedCodes
-    .map((code) => KECAMATAN_LIST.find((k) => k.code === code))
-    .filter((k): k is KecamatanOption => Boolean(k));
+  const selectedDistricts = selectedCodes
+    .map((code) => DISTRICT_LIST.find((k) => k.code === code))
+    .filter((k): k is DistrictOption => Boolean(k));
 
-  const readySeries = selectedKecamatan
+  const readySeries = selectedDistricts
     .map((k) => dataByCode[k.code]?.series)
-    .filter((s): s is KecamatanSeries => Boolean(s && s.points.length > 0));
+    .filter((s): s is DistrictSeries => Boolean(s && s.points.length > 0));
 
   const isAnyLoading = selectedCodes.some((c) => dataByCode[c]?.loading);
 
   // ---------------------------------------------------------------------
-  // Transformasi data historis+prediksi -> baris chart dengan band per kecamatan
+  // Transform history+prediction data -> chart rows with per-district bands
   // ---------------------------------------------------------------------
-  const { rows, boundaryLabel, monthLabels } = useMemo(() => {
-    if (readySeries.length === 0) {
-      return { rows: [] as any[], boundaryLabel: null as string | null, monthLabels: [] as string[] };
-    }
-
-    const total = readySeries.length;
-    const pointCount = readySeries[0].points.length;
-    const historyLength = readySeries[0].points.filter((p) => p.kind === "historical").length;
-
-    const months = readySeries[0].points.map((p) => p.monthLabel);
-    const out: any[] = [];
-
-    for (let t = 0; t < pointCount; t++) {
-      const row: any = { monthLabel: months[t] };
-      readySeries.forEach((series, i) => {
-        const key = `k${i}`;
-        const point = series.points[t];
-        if (!point) return;
-        const normalized = phaseNormalizedPosition(point.phase);
-        const bandValue = (total - 1 - i) * BAND_HEIGHT + normalized * BAND_HEIGHT;
-
-        row[`${key}_hist`] = t < historyLength ? bandValue : null;
-        row[`${key}_pred`] = t >= historyLength - 1 ? bandValue : null;
-        row[`${key}_meta`] = {
-          phase: point.phase,
-          kind: point.kind,
-          confidence: point.confidence,
-          label: phaseLabel(point.phase),
-          name: series.kecamatanName,
-          subsegment: series.subsegment,
-          color: getKecamatanColor(selectedCodes[i]),
-        };
-      });
-      out.push(row);
-    }
-
-    return {
-      rows: out,
-      boundaryLabel: months[historyLength - 1] ?? null,
-      monthLabels: months,
-    };
-  }, [readySeries, selectedCodes]);
+  const { rows, boundaryLabel, monthLabels } = useMemo(
+    () => buildChartRows(readySeries, selectedCodes),
+    [readySeries, selectedCodes]
+  );
 
   const totalBands = readySeries.length;
 
@@ -217,7 +228,7 @@ export default function FaseTanamChart() {
         </p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
-      {/* --- Panel Filter --- */}
+      {/* --- Filter Panel --- */}
       <Card className="h-fit">
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
@@ -230,27 +241,27 @@ export default function FaseTanamChart() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-            {KECAMATAN_LIST.map((kec) => {
-              const checked = selectedCodes.includes(kec.code);
+            {DISTRICT_LIST.map((district) => {
+              const checked = selectedCodes.includes(district.code);
               return (
                 <div
-                  key={kec.code}
+                  key={district.code}
                   className="flex items-center gap-2 rounded-md px-1.5 py-1 transition-colors hover:bg-green-50/60"
                 >
                   <Checkbox
-                    id={`kec-${kec.code}`}
+                    id={`district-${district.code}`}
                     checked={checked}
-                    onCheckedChange={(v) => handleToggle(kec, Boolean(v))}
+                    onCheckedChange={(v) => handleToggle(district, Boolean(v))}
                   />
                   <Label
-                    htmlFor={`kec-${kec.code}`}
+                    htmlFor={`district-${district.code}`}
                     className="text-sm font-normal cursor-pointer flex items-center gap-1.5"
                   >
                     <span
                       className="inline-block h-2.5 w-2.5 rounded-full"
-                      style={{ background: getKecamatanColor(kec.code) }}
+                      style={{ background: getDistrictColor(district.code) }}
                     />
-                    {kec.name}
+                    {district.name}
                   </Label>
                 </div>
               );
@@ -261,7 +272,7 @@ export default function FaseTanamChart() {
             <button
               type="button"
               onClick={handleSelectAll}
-              disabled={selectedCodes.length === KECAMATAN_LIST.length}
+              disabled={selectedCodes.length === DISTRICT_LIST.length}
               className="text-xs font-medium text-green-700 hover:text-green-800 hover:underline cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Pilih Semua
@@ -275,31 +286,31 @@ export default function FaseTanamChart() {
               Reset
             </button>
             <span className="ml-auto text-xs text-muted-foreground">
-              {selectedCodes.length}/{KECAMATAN_LIST.length} terpilih
+              {selectedCodes.length}/{DISTRICT_LIST.length} terpilih
             </span>
           </div>
 
-          {/* Tabel subsegmen: muncul per kecamatan yang sudah dicentang */}
-          {selectedKecamatan.length > 0 && (
+          {/* Subsegment selectors: shown per checked district */}
+          {selectedDistricts.length > 0 && (
             <div className="border-t pt-3 space-y-2">
               <p className="text-xs font-medium text-muted-foreground">
                 Subsegmen per kecamatan
               </p>
-              {selectedKecamatan.map((kec) => {
-                const value = subsegmentByCode[kec.code] ?? AGGREGATE_VALUE;
-                const options = subsegmentOptions[kec.code] ?? [];
-                const state = dataByCode[kec.code];
-                const loadingOpts = optionsLoading[kec.code];
+              {selectedDistricts.map((district) => {
+                const value = subsegmentByCode[district.code] ?? AGGREGATE_VALUE;
+                const options = subsegmentOptions[district.code] ?? [];
+                const state = dataByCode[district.code];
+                const loadingOpts = optionsLoading[district.code];
                 return (
-                  <div key={kec.code} className="flex items-center gap-2">
+                  <div key={district.code} className="flex items-center gap-2">
                     <span
                       className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
-                      style={{ background: getKecamatanColor(kec.code) }}
+                      style={{ background: getDistrictColor(district.code) }}
                     />
-                    <span className="text-xs w-20 truncate">{kec.name}</span>
+                    <span className="text-xs w-20 truncate">{district.name}</span>
                     <Select
                       value={value}
-                      onValueChange={(v) => handleSubsegmentChange(kec, v)}
+                      onValueChange={(v) => handleSubsegmentChange(district, v)}
                     >
                       <SelectTrigger className="h-8 text-xs flex-1">
                         <SelectValue />
@@ -357,7 +368,7 @@ export default function FaseTanamChart() {
             </span>
           </div>
 
-          {selectedKecamatan.length === 0 ? (
+          {selectedDistricts.length === 0 ? (
             <div className="flex flex-col items-center justify-center text-center py-16 text-muted-foreground gap-3">
               <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-green-50">
                 <Sprout className="h-7 w-7 text-green-700" />
@@ -372,24 +383,24 @@ export default function FaseTanamChart() {
             </div>
           ) : (
             <>
-              {/* Legend interaktif (klik untuk sembunyikan/tampilkan garis) */}
+              {/* Interactive legend (click to hide/show lines) */}
               <div className="flex flex-wrap gap-2 mb-3">
-                {selectedKecamatan.map((kec) => {
-                  const hidden = hiddenCodes.has(kec.code);
-                  const series = dataByCode[kec.code]?.series;
+                {selectedDistricts.map((district) => {
+                  const hidden = hiddenCodes.has(district.code);
+                  const series = dataByCode[district.code]?.series;
                   return (
                     <button
-                      key={kec.code}
-                      onClick={() => toggleHidden(kec.code)}
+                      key={district.code}
+                      onClick={() => toggleHidden(district.code)}
                       className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-opacity cursor-pointer hover:border-green-300 ${
                         hidden ? "opacity-40" : "opacity-100"
                       }`}
                     >
                       <span
                         className="inline-block h-2.5 w-2.5 rounded-full"
-                        style={{ background: getKecamatanColor(kec.code) }}
+                        style={{ background: getDistrictColor(district.code) }}
                       />
-                      {kec.name}
+                      {district.name}
                       <span className="text-muted-foreground">
                         ({series?.subsegment === AGGREGATE_VALUE
                           ? "Aggregate"
@@ -402,20 +413,20 @@ export default function FaseTanamChart() {
                 })}
               </div>
 
-              {/* Status muat data per kecamatan */}
-              {selectedKecamatan.map((kec) => {
-                const series = dataByCode[kec.code]?.series;
+              {/* Per-district data load status */}
+              {selectedDistricts.map((district) => {
+                const series = dataByCode[district.code]?.series;
                 if (!series) return null;
                 if (series.historyError) {
                   return (
                     <div
-                      key={kec.code}
+                      key={district.code}
                       className="mb-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300"
                     >
                       <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                       <div>
                         <p className="font-medium">
-                          {kec.name} — Gagal memuat data historis
+                          {district.name} — Gagal memuat data historis
                         </p>
                         <p className="mt-0.5 text-red-600/90 dark:text-red-400/90">
                           {series.historyError} Periksa koneksi database lalu pilih
@@ -428,13 +439,13 @@ export default function FaseTanamChart() {
                 if (series.predictionError) {
                   return (
                     <div
-                      key={kec.code}
+                      key={district.code}
                       className="mb-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-300"
                     >
                       <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                       <div>
                         <p className="font-medium">
-                          {kec.name} — Histori tampil, prediksi gagal
+                          {district.name} — Histori tampil, prediksi gagal
                         </p>
                         <p className="mt-0.5 text-amber-600/90 dark:text-amber-400/90">
                           {series.predictionError} Grafik hanya menampilkan data
@@ -499,7 +510,7 @@ export default function FaseTanamChart() {
                       />
                     ))}
 
-                    {/* Area prediksi (soft highlight) */}
+                    {/* Prediction area (soft highlight) */}
                     {boundaryLabel && (
                       <ReferenceArea
                         x1={boundaryLabel}
@@ -511,7 +522,7 @@ export default function FaseTanamChart() {
                       />
                     )}
 
-                    {/* Separator historis → prediksi */}
+                    {/* History → prediction separator */}
                     {boundaryLabel && (
                       <ReferenceLine
                         x={boundaryLabel}
@@ -527,7 +538,7 @@ export default function FaseTanamChart() {
                       />
                     )}
 
-                    {/* Garis pembatas & label tiap band kecamatan */}
+                    {/* Boundary lines & labels for each district band */}
                     {Array.from({ length: totalBands + 1 }).map((_, idx) => (
                       <ReferenceLine
                         key={`band-line-${idx}`}
@@ -553,7 +564,7 @@ export default function FaseTanamChart() {
                     {readySeries.map((series, i) => {
                       const key = `k${i}`;
                       const code = selectedCodes[i];
-                      const color = getKecamatanColor(code);
+                      const color = getDistrictColor(code);
                       const isHidden = hiddenCodes.has(code);
                       return (
                         <React.Fragment key={key}>
@@ -569,7 +580,7 @@ export default function FaseTanamChart() {
                             activeDot={{ r: 5 }}
                             isAnimationActive
                             animationDuration={600}
-                            name={series.kecamatanName}
+                            name={series.districtName}
                           />
                           <Line
                             dataKey={`${key}_pred`}
@@ -593,21 +604,21 @@ export default function FaseTanamChart() {
                   </ComposedChart>
                 </ResponsiveContainer>
 
-                {/* Label nama kecamatan di tiap lajur (band) */}
+                {/* District name labels in each lane (band) */}
                 <div className="pointer-events-none absolute inset-y-0 left-3 top-2 bottom-8 flex flex-col justify-between">
                   {readySeries.map((series, i) => (
                     <span
                       key={i}
                       className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-background/80 border w-fit"
-                      style={{ color: getKecamatanColor(selectedCodes[i]) }}
+                      style={{ color: getDistrictColor(selectedCodes[i]) }}
                     >
-                      {series.kecamatanName}
+                      {series.districtName}
                     </span>
                   ))}
                 </div>
               </div>
 
-              {/* Ringkasan singkat untuk pengguna awam */}
+              {/* Quick summary for lay users */}
               <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {readySeries.map((series, i) => {
                   const nextPrediction = series.points.find((p) => p.kind === "prediction");
@@ -619,10 +630,10 @@ export default function FaseTanamChart() {
                     >
                       <span
                         className="h-2.5 w-2.5 rounded-full shrink-0"
-                        style={{ background: getKecamatanColor(selectedCodes[i]) }}
+                        style={{ background: getDistrictColor(selectedCodes[i]) }}
                       />
                       <div className="min-w-0">
-                        <p className="font-medium truncate">{series.kecamatanName}</p>
+                        <p className="font-medium truncate">{series.districtName}</p>
                         <p className="text-muted-foreground truncate">
                           Bulan depan: {phaseLabel(nextPrediction.phase)}
                           {typeof nextPrediction.confidence === "number" &&
@@ -672,7 +683,7 @@ export default function FaseTanamChart() {
 }
 
 // ---------------------------------------------------------------------------
-// Dot kustom: titik historis solid, titik prediksi berbentuk cincin
+// Custom dot: solid dot for history, ring-shaped dot for prediction
 // ---------------------------------------------------------------------------
 function renderDot(props: any, color: string, hidden: boolean, isPrediction = false) {
   const { cx, cy, value } = props;
@@ -704,8 +715,8 @@ function renderDot(props: any, color: string, hidden: boolean, isPrediction = fa
 }
 
 // ---------------------------------------------------------------------------
-// Tooltip kustom: menampilkan tiap kecamatan yang aktif di titik-x tersebut,
-// dengan nama fase (bukan angka mentah) dan tingkat keyakinan untuk prediksi.
+// Custom tooltip: shows every district active at that x point,
+// with the phase name (not the raw number) and confidence for predictions.
 // ---------------------------------------------------------------------------
 const phaseColors: Record<string, string> = {
   "1": "#3E5F44", "2": "#5E936C", "3.1": "#93DA97", "3.2": "#B5E8B8",
