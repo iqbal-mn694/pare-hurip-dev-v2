@@ -9,7 +9,6 @@ import {
   Upload,
   Database,
   MapPin,
-  Cpu,
   Users,
   Settings,
   Menu,
@@ -28,7 +27,6 @@ const navItems = [
   { name: "Import Data KSA", href: "/admin/ksa-import", icon: Upload },
   { name: "Kelola Data KSA", href: "/admin/ksa-data", icon: Database },
   { name: "Referensi Wilayah", href: "/admin/region-reference", icon: MapPin },
-  { name: "Model Prediksi", href: "/admin/prediction-model", icon: Cpu },
   { name: "Pengguna Admin", href: "/admin/admin-users", icon: Users },
 ];
 
