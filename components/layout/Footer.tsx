@@ -59,8 +59,12 @@ const Footer = () => {
             </div>
             <hr className="my-6 border-gray-200 dark:border-slate-800 sm:mx-auto lg:my-8" />
             <div className="sm:flex sm:items-center sm:justify-between">
-                <span className="block text-center text-sm text-gray-500 dark:text-slate-400 sm:text-center">© 2025 <a href="https://flowbite.com/" className="hover:underline"> Badan Pusat Statistik Kota Tasikmalaya</a>. All Rights Reserved.
-                </span>
+                <span className="block text-center text-sm text-gray-500 dark:text-slate-400 sm:text-center"> © {new Date().getFullYear()}{" "}
+                    <a href="https://flowbite.com/" className="hover:underline">
+                        Badan Pusat Statistik Kota Tasikmalaya
+                    </a>
+                    . All Rights Reserved.
+                    </span>
                 <div className="flex justify-center mt-4 space-x-5 sm:justify-center sm:mt-0">
                     <a href="#" className="text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:text-slate-100 dark:hover:text-slate-100">
                         <svg className="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 8 19">
