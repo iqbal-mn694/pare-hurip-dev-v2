@@ -110,7 +110,7 @@ const SiklusTumbuhPadi = () => {
         <Carousel
           opts={{
             align: "start",
-            loop: true,
+            loop: false,
           }}
           className="w-full max-w-xs sm:max-w-xl md:max-w-3xl lg:max-w-5xl mx-auto"
         >

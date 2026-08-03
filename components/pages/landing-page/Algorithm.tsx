@@ -60,11 +60,10 @@ const Algorithm = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Heading */}
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-slate-100">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-slate-100 mb-8">
             Teknologi <span className="text-green-600">Machine Learning</span>{" "}
             di Balik Prediksi
           </h2>
-          <div className="w-24 h-1 bg-green-700 mx-auto mb-8" />
           <p className="mt-4 text-lg text-gray-600 dark:text-slate-300 max-w-3xl mx-auto">
             Menggabungkan model statistik dan machine learning — Markov Chain,
             Random Forest, dan LSTM Hybrid — untuk hasil prediksi fase tanam
