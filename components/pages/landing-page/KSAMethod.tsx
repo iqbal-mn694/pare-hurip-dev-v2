@@ -65,8 +65,6 @@ const KSAMethod = () => {
           >
             <div className="relative w-full h-96 lg:h-[500px] shadow-xl rounded-lg overflow-hidden group">
               <Image
-                // Make sure this image URL is publicly accessible.
-                // You can upload it to a service like Imgur, Vercel Blob, or store it in the /public folder.
                 src="https://i.ibb.co.com/SwF0hxqp/Screenshot-2025-07-25-221613-2.png" 
                 alt="Diagram Metode KSA"
                 layout="fill"

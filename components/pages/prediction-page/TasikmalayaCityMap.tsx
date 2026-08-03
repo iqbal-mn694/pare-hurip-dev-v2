@@ -8,7 +8,6 @@ import { LatLngExpression } from "leaflet";
 import { GeoJsonObject } from "geojson";
 
 import { yAxisValueMap, formatKsaDate } from "@/lib/planting-phase/constants";
-import { useTheme } from "@/lib/theme-context";
 
 interface TasikmalayaCityMapProps {
   geoJsonDistrict: any;
@@ -25,8 +24,6 @@ const TasikmalayaCityMap: React.FC<TasikmalayaCityMapProps> = ({
   selectedMonth,
 }) => {
   const center: LatLngExpression = [-7.35, 108.22];
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
 
   const phaseLookup = useMemo(() => {
     const lookup = new Map<string, number | null>();
@@ -93,17 +90,8 @@ const TasikmalayaCityMap: React.FC<TasikmalayaCityMapProps> = ({
       style={{ height: "500px", width: "100%", borderRadius: "8px", zIndex: 1 }}
     >
       <TileLayer
-        key={isDark ? "dark" : "light"}
-        attribution={
-          isDark
-            ? "&copy; <a href=\"https://carto.com/attributions\">CARTO</a>"
-            : "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors"
-        }
-        url={
-          isDark
-            ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-            : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        }
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
       {processedDistrictGeoJSON && (

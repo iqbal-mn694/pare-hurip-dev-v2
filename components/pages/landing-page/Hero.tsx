@@ -49,17 +49,14 @@ const Hero: React.FC<HeroProps> = ({ heading, message }) => {
   return (
     <section id="hero">
       <div className="relative flex w-full items-center h-[100vh] mb-[10rem] bg-fixed bg-center bg-cover hero-img">
-        {/* Overlayer */}
         <div className="absolute h-full top-0 left-0 right-0 bottom-0 bg-black/40 z-[2]" />
 
-        {/* Use motion.div for animated elements */}
         <motion.div
           className="p-4 sm:p-5 text-white z-[2] w-full"
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
-          // CHANGE HERE:
-          viewport={{ once: false, amount: 0.5 }} // Animation runs every time it enters the viewport
+          viewport={{ once: false, amount: 0.5 }}
         >
           <div className="mt-10 mx-auto text-center sm:ml-[10rem] sm:text-left max-w-[90%] sm:max-w-[800px]">
             <motion.h2
@@ -77,7 +74,6 @@ const Hero: React.FC<HeroProps> = ({ heading, message }) => {
             <motion.button className="px-4 py-2 sm:px-8 sm:py-2 border rounded-lg mt-4 cursor-pointer hover:bg-white/40 dark:hover:bg-white/20 transition-colors duration-200"
               variants={buttonVariants}
             >
-              {/* Replace href with the page's section ID, #visualisasi-interaktif */}
               <Link href="/ksa-visualization">Analisis Terbaru Kami</Link>
             </motion.button>
           </div>

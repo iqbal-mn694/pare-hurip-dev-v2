@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function Page() {
   return (
-    <div className="bg-gradient-to-br from-slate-50 via-white to-green-50 dark:from-slate-900 dark:via-slate-900 dark:to-green-950/30 min-h-screen">
+    <div className="bg-white dark:bg-slate-950 min-h-screen">
       {/* HERO */}
       <header className="pt-28 pb-8 px-4 md:px-8 max-w-7xl mx-auto text-center md:text-left">
         <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-800 dark:text-white leading-tight">

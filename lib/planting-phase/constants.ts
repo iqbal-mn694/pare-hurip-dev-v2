@@ -87,7 +87,7 @@ export const getRiceFieldPhaseColor = (phase: number | null): string => {
     case 3.2: return "#B5E8B8"; // Generative 2
     case 3.3: return "#DAF5DB"; // Generative 3
     case 4: return "#FED16A"; // Harvest
-    case 6: return "#101010"; // Failed crop (puso)
+    case 6: return "#4B5563"; // Failed crop (puso)
     case 8: return "#BDBDBD"; // Not rice field
     default: return "#78909C"; // Default
   }

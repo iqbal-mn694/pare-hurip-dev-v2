@@ -27,7 +27,7 @@ const Header = () => {
 
   useEffect(() => {
     const isDark = resolvedTheme === "dark";
-    const scrolledBg = isDark ? "#0e1510" : "#ffffff";
+    const scrolledBg = isDark ? "#1C231E" : "#ffffff";
     const scrolledText = isDark ? "#edf2ec" : "#000000";
     
     if (pathname === "/") {
