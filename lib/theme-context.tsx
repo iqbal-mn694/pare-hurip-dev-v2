@@ -26,6 +26,13 @@ function getStoredTheme(): Theme | null {
   return null;
 }
 
+const THEME_COOKIE = "theme=; path=/; max-age=31536000; SameSite=Lax";
+
+function setThemeCookie(theme: Theme) {
+  if (typeof window === "undefined") return;
+  document.cookie = `theme=${theme}; ${THEME_COOKIE}`;
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Always start "light" so SSR and the first client render match; the real
   // theme is applied in a mount effect (the inline anti-FOUC script already
@@ -34,7 +41,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     const stored = getStoredTheme();
-    setResolvedTheme(stored ?? (isDarkHour(new Date()) ? "dark" : "light"));
+    const next = stored ?? (isDarkHour(new Date()) ? "dark" : "light");
+    setResolvedTheme(next);
+    setThemeCookie(next);
   }, []);
 
   React.useEffect(() => {
@@ -46,7 +55,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (getStoredTheme()) return;
 
     const handle = window.setInterval(() => {
-      setResolvedTheme(isDarkHour(new Date()) ? "dark" : "light");
+      const next = isDarkHour(new Date()) ? "dark" : "light";
+      setResolvedTheme(next);
+      setThemeCookie(next);
     }, 60_000);
 
     return () => window.clearInterval(handle);
@@ -56,6 +67,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setResolvedTheme((prev) => {
       const next: Theme = prev === "dark" ? "light" : "dark";
       window.localStorage.setItem(STORAGE_KEY, next);
+      setThemeCookie(next);
       return next;
     });
   }, []);

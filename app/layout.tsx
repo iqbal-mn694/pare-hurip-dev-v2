@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AdminAuthProvider } from "@/components/pages/admin-page/AdminAuthContext";
@@ -41,15 +42,22 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Predict the theme on the server from the `theme` cookie (written by
+  // theme-context) so the `dark` class is already in the SSR HTML and the
+  // anti-FOUC script never mutates <html> in a way hydration can detect.
+  const themeCookie = (await cookies()).get("theme")?.value;
+  const isDark = themeCookie === "dark";
+
   return (
-    <html lang="id" suppressHydrationWarning>
+    <html lang="id" suppressHydrationWarning className={isDark ? "dark" : undefined}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning
       >
         <script
           dangerouslySetInnerHTML={{
